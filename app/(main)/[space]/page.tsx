@@ -4,8 +4,9 @@ import { useSync } from '@/hooks/use-sync'
 import { NoteStream } from '@/components/stream/note-stream'
 import { Composer } from '@/components/editor/composer'
 import { SpaceHeader } from '@/components/layout/space-header'
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useSpaces } from '@/hooks/use-spaces'
 
 export default function SpacePage({ params }: { params: Promise<{ space: string }> }) {
   const { space: spaceName } = use(params) // URL param is the display name
@@ -16,7 +17,19 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
   const [editContent, setEditContent] = useState<string>()
   const [editingNoteId, setEditingNoteId] = useState<string>()
   
+  const { spaces, isLoading: isLoadingSpaces } = useSpaces()
+  
   useSync(spaceName)
+
+  // Validate space existence
+  useEffect(() => {
+    if (!isLoadingSpaces && spaces) {
+      const spaceExists = spaces.some(s => s.name === spaceName)
+      if (!spaceExists) {
+        router.push('/app')
+      }
+    }
+  }, [spaceName, spaces, isLoadingSpaces, router])
 
   const handleEditNote = (content: string, noteId: string) => {
     setEditContent(content)
