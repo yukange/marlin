@@ -1,0 +1,271 @@
+"use client"
+
+import { EditorContent } from '@tiptap/react'
+import { Button } from '@/components/ui/button'
+import { Toggle } from '@/components/ui/toggle'
+import { Bold, Italic, Strikethrough, Code, List, ListOrdered, CheckSquare } from 'lucide-react'
+import { useMarlinEditor, useComposerState, useComposerShortcuts, useComposerSubmit } from '@/hooks/use-composer'
+import { useConfirmDialogStore } from '@/hooks/use-confirm-dialog'
+import { cn, getPlatformKey } from '@/lib/utils'
+import { useState, useEffect } from 'react'
+
+interface ComposerProps {
+  space: string
+  initialContent?: string
+  editingNoteId?: string
+  onComplete?: () => void
+}
+
+export function Composer({ space, initialContent, editingNoteId, onComplete }: ComposerProps) {
+  const openDialog = useConfirmDialogStore((state) => state.openDialog)
+  const [shortcutKey, setShortcutKey] = useState('')
+
+  useEffect(() => {
+    setShortcutKey(getPlatformKey())
+  }, [])
+  
+  // Composer state management
+  const {
+    isSending,
+    setIsSending,
+    isEmpty,
+    setIsEmpty,
+    isExpanded,
+    currentNoteId,
+    editorRef,
+    reset,
+    startNewNote,
+    expand,
+  } = useComposerState({
+    initialContent,
+    editingNoteId,
+    onSetContent: (content) => setContent(content),
+    onFocus: (position) => focus(position),
+  })
+
+  // Tiptap editor
+  const { editor, getMarkdownContent, setContent, clearContent, focus } = useMarlinEditor({
+    isExpanded,
+    onUpdate: setIsEmpty,
+    space,
+  })
+
+  // Submit handler
+  const { handleSubmit } = useComposerSubmit({
+    space,
+    getMarkdownContent,
+    currentNoteId,
+    onSuccess: () => {
+      clearContent()
+      reset()
+      onComplete?.()
+    },
+  })
+
+  // Handle send with loading state
+  const handleSend = async () => {
+    if (!editor || editor.isEmpty || isSending) return
+    
+    setIsSending(true)
+    try {
+      await handleSubmit()
+      // Local save succeeded, close editor
+      clearContent()
+      reset()
+      onComplete?.()
+    } catch (error) {
+      // Local save failed, keep editor open with content
+      console.error('Local save failed:', error)
+      // Toast already shown in useNoteMutations
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handleEditorClick = () => {
+    if (!isExpanded) {
+      expand()
+      // Use requestAnimationFrame to ensure editor is visible before focusing
+      requestAnimationFrame(() => {
+        focus()
+      })
+    }
+  }
+
+  const hasUnsavedChanges = () => {
+    // Check if there's content in the editor
+    return editor && !editor.isEmpty
+  }
+
+  const handleClose = () => {
+    if (isSending) return
+
+    // Check for unsaved changes
+    if (hasUnsavedChanges()) {
+      openDialog({
+        title: 'Discard Changes?',
+        description: currentNoteId 
+          ? 'You have unsaved changes. They will be lost if you close now.'
+          : 'You have unsaved content. It will be lost if you close now.',
+        confirmText: 'Discard',
+        cancelText: 'Keep Editing',
+        variant: 'destructive',
+        onConfirm: () => {
+          reset()
+          clearContent()
+          onComplete?.()
+        },
+      })
+      return
+    }
+
+    reset()
+    clearContent()
+    onComplete?.()
+  }
+
+  // Keyboard shortcuts
+  useComposerShortcuts({
+    isEmpty,
+    isSending,
+    isExpanded,
+    onSend: handleSend,
+    onNewNote: () => {
+      startNewNote()
+      clearContent()
+      // Use requestAnimationFrame for smoother focus after state update
+      requestAnimationFrame(() => focus())
+    },
+    onClose: handleClose,
+  })
+
+  return (
+    <>
+      {isExpanded && (
+        <div 
+          className="fixed inset-0 z-40 md:hidden pointer-events-none"
+          aria-label="Backdrop"
+        />
+      )}
+
+      <section 
+        ref={editorRef}
+        className={cn(
+          "transition-all duration-300 ease-out overflow-hidden bg-white dark:bg-zinc-900 ml-3 mr-4 rounded-t-2xl flex flex-col relative",
+          isExpanded ? "h-[400px] border border-b-0 border-zinc-200 dark:border-zinc-800 z-50 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)]" : "h-16 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_8px_rgba(0,0,0,0.3)]"
+        )}
+      >
+        {/* Collapsed State Placeholder */}
+        {!isExpanded && (
+          <button 
+            className="h-full flex items-center px-6 cursor-text w-full text-left absolute inset-0 z-10"
+            onClick={handleEditorClick}
+          >
+            <span className="flex-1 text-sm text-zinc-400 dark:text-zinc-500">Type a note...</span>
+          </button>
+        )}
+
+        {/* Expanded State Content - Always mounted but hidden when collapsed to allow immediate focus */}
+        <div className={cn("flex flex-col h-full w-full", !isExpanded && "hidden")}>
+            <article 
+              data-expanded={isExpanded}
+              className="composer-scroll-area flex-1 [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full"
+            >
+              <EditorContent editor={editor} />
+            </article>
+
+            <footer className="flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-800/50 px-4 py-2">
+              <nav className="flex gap-1" aria-label="Formatting tools">
+                <Toggle
+                  size="sm"
+                  pressed={editor?.isActive('bold') ?? false}
+                  onPressedChange={() => editor?.chain().focus().toggleBold().run()}
+                  disabled={!editor}
+                  className="h-8 w-8"
+                >
+                  <Bold className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={editor?.isActive('italic') ?? false}
+                  onPressedChange={() => editor?.chain().focus().toggleItalic().run()}
+                  disabled={!editor}
+                  className="h-8 w-8"
+                >
+                  <Italic className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={editor?.isActive('strike') ?? false}
+                  onPressedChange={() => editor?.chain().focus().toggleStrike().run()}
+                  disabled={!editor}
+                  className="h-8 w-8"
+                >
+                  <Strikethrough className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={editor?.isActive('code') ?? false}
+                  onPressedChange={() => editor?.chain().focus().toggleCode().run()}
+                  disabled={!editor}
+                  className="h-8 w-8"
+                >
+                  <Code className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={editor?.isActive('bulletList') ?? false}
+                  onPressedChange={() => editor?.chain().focus().toggleBulletList().run()}
+                  disabled={!editor}
+                  className="h-8 w-8"
+                >
+                  <List className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={editor?.isActive('orderedList') ?? false}
+                  onPressedChange={() => editor?.chain().focus().toggleOrderedList().run()}
+                  disabled={!editor}
+                  className="h-8 w-8"
+                >
+                  <ListOrdered className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={editor?.isActive('taskList') ?? false}
+                  onPressedChange={() => editor?.chain().focus().toggleTaskList().run()}
+                  disabled={!editor}
+                  className="h-8 w-8"
+                >
+                  <CheckSquare className="h-4 w-4" />
+                </Toggle>
+              </nav>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost"
+                  size="sm" 
+                  className="h-8 text-zinc-600 dark:text-zinc-400" 
+                  onClick={handleClose}
+                  disabled={isSending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="h-8 rounded-md bg-[#30CF79] hover:bg-[#2BC06E] text-white font-medium text-xs px-4 transition-colors" 
+                  onClick={handleSend}
+                  disabled={!editor || isEmpty || isSending}
+                >
+                  {isSending ? 'Sending...' : (
+                    <span>
+                      Send <span className="opacity-80 ml-1 font-normal">{shortcutKey} ↩︎</span>
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </footer>
+        </div>
+      </section>
+    </>
+  )
+}

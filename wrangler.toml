@@ -1,0 +1,16 @@
+name = "marlin"
+main = ".open-next/worker.js"
+compatibility_date = "2025-12-03"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Environment variables will be set via Cloudflare dashboard or CLI
+
+# For local development
+# Add your GitHub OAuth credentials to .dev.vars file (not committed to git)
+
+[dev]
+port = 3000
+
+[assets]
+directory = ".open-next/assets"

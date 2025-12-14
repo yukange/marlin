@@ -1,0 +1,18 @@
+{
+  "name": "Marlin - GitHub Native Notes",
+  "short_name": "Marlin",
+  "description": "Local-first note-taking app powered by GitHub",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#30CF79",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-light.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
