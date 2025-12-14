@@ -17,13 +17,47 @@ import { db } from '@/lib/client/db'
 export function useNotes(space: string, searchQuery = '', filterDate = '') {
   const notes = useLiveQuery(
     async () => {
-      const allNotes = await db.notes
+      const lowerQuery = searchQuery.trim().toLowerCase()
+      const isTagSearch = lowerQuery.startsWith('#') && lowerQuery.length > 1
+      
+      let filteredNotes: any[] = []
+
+      // Optimization: For tag searches, use the tags index
+      if (isTagSearch) {
+        const tagToSearch = lowerQuery.slice(1)
+        
+        // Use the multi-entry index for tags
+        // This is much faster than scanning all notes in the space
+        const notesByTag = await db.notes
+          .where('tags')
+          .startsWithIgnoreCase(tagToSearch)
+          .distinct()
+          .toArray()
+
+        // Filter by space and date in memory (dataset should be small)
+        filteredNotes = notesByTag.filter(note => note.space === space)
+
+        if (filterDate.trim()) {
+          const targetDate = new Date(filterDate)
+          const startOfDay = new Date(targetDate)
+          startOfDay.setHours(0, 0, 0, 0)
+          const endOfDay = new Date(targetDate)
+          endOfDay.setHours(23, 59, 59, 999)
+
+          filteredNotes = filteredNotes.filter((note) => {
+            const noteDate = new Date(note.date)
+            return noteDate >= startOfDay && noteDate <= endOfDay
+          })
+        }
+
+        // Sort by date descending
+        return filteredNotes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      }
+
+      // Default strategy: Filter on collection before materializing
+      let collection = db.notes
         .where('space')
         .equals(space)
-        .reverse()
-        .sortBy('date')
-
-      let filteredNotes = allNotes
 
       // Date filtering
       if (filterDate.trim()) {
@@ -33,34 +67,28 @@ export function useNotes(space: string, searchQuery = '', filterDate = '') {
         const endOfDay = new Date(targetDate)
         endOfDay.setHours(23, 59, 59, 999)
 
-        filteredNotes = filteredNotes.filter((note) => {
+        collection = collection.filter((note) => {
           const noteDate = new Date(note.date)
           return noteDate >= startOfDay && noteDate <= endOfDay
         })
       }
 
-      // Search query filtering
+      // Content/Partial Tag filtering
       if (searchQuery.trim()) {
-        const lowerQuery = searchQuery.trim().toLowerCase()
-
-        filteredNotes = filteredNotes.filter((note) => {
-          // Search in tags if query starts with #
-          if (lowerQuery.startsWith('#')) {
-            const tagToSearch = lowerQuery.slice(1)
-            return note.tags.some((tag) => tag.toLowerCase().includes(tagToSearch))
-          }
-
+        collection = collection.filter((note) => {
           // Search in content
           if (note.content.toLowerCase().includes(lowerQuery)) return true
 
-          // Search in tags (without # prefix)
+          // Search in tags (without # prefix) - fallback for partial matches
           if (note.tags.some((tag) => tag.toLowerCase().includes(lowerQuery))) return true
 
           return false
         })
       }
 
-      return filteredNotes
+      // Sort by date (sortBy returns array)
+      const sortedNotes = await collection.sortBy('date')
+      return sortedNotes.reverse()
     },
     [space, searchQuery, filterDate]
   )
@@ -83,23 +111,36 @@ interface UseNoteSearchOptions {
 export function useNoteSearch({ spaceId, searchQuery }: UseNoteSearchOptions) {
   const notes = useLiveQuery(
     async () => {
-      const allNotes = await db.notes
-        .where('space')
-        .equals(spaceId)
-        .reverse()
-        .sortBy('date')
+      const lowerQuery = searchQuery.trim().toLowerCase()
+      const isTagSearch = lowerQuery.startsWith('#') && lowerQuery.length > 1
 
-      if (!searchQuery.trim()) {
-        return allNotes
+      if (isTagSearch) {
+        const tagToSearch = lowerQuery.slice(1)
+        const notesByTag = await db.notes
+          .where('tags')
+          .startsWithIgnoreCase(tagToSearch)
+          .distinct()
+          .toArray()
+
+        return notesByTag
+          .filter(note => note.space === spaceId)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       }
 
-      const query = searchQuery.toLowerCase()
-      
-      return allNotes.filter(note => {
-        const contentMatch = note.content.toLowerCase().includes(query)
-        const tagMatch = note.tags.some(tag => tag.toLowerCase().includes(query))
-        return contentMatch || tagMatch
-      })
+      let collection = db.notes
+        .where('space')
+        .equals(spaceId)
+
+      if (searchQuery.trim()) {
+        collection = collection.filter(note => {
+          const contentMatch = note.content.toLowerCase().includes(lowerQuery)
+          const tagMatch = note.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+          return contentMatch || tagMatch
+        })
+      }
+
+      const sortedNotes = await collection.sortBy('date')
+      return sortedNotes.reverse()
     },
     [spaceId, searchQuery]
   )
