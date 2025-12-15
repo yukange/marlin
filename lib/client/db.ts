@@ -70,6 +70,12 @@ db.version(3).stores({
   })
 });
 
+// Version 4: Add compound index for efficient sorting by date within a space
+db.version(4).stores({
+  notes: 'id, sha, content, *tags, date, space, syncStatus, [space+date]',
+  spaces: 'name, repoName, updatedAt'
+});
+
 /**
  * Check if there are any unsynced changes in the database
  * 

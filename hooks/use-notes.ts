@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import Dexie from 'dexie'
 import { db } from '@/lib/client/db'
 
 /**
@@ -18,6 +19,17 @@ export function useNotes(space: string, searchQuery = '', filterDate = '') {
   const notes = useLiveQuery(
     async () => {
       const lowerQuery = searchQuery.trim().toLowerCase()
+      
+      // Optimization: Default view (Space Only)
+      // Use compound index [space+date] to fetch sorted results directly from DB engine
+      if (!lowerQuery && !filterDate.trim()) {
+        return db.notes
+          .where('[space+date]')
+          .between([space, Dexie.minKey], [space, Dexie.maxKey])
+          .reverse()
+          .toArray()
+      }
+
       const isTagSearch = lowerQuery.startsWith('#') && lowerQuery.length > 1
       
       let filteredNotes: any[] = []
