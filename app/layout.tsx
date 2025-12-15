@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://marlinnotes.com"),
   title: "Marlin - GitHub Native Notes",
   description: "Local-first note-taking app powered by GitHub",
   manifest: "/manifest.json",

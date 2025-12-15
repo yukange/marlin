@@ -6,6 +6,38 @@ import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { SignInButton } from "@/components/layout/sign-in-button"
 import pkg from "@/package.json"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Marlin - Local-First Markdown Notes for GitHub",
+  description: "Experience zero-latency note-taking with full data sovereignty. Marlin syncs your Markdown notes directly to your private GitHub repository. Offline-first, Edge-powered.",
+  keywords: ["markdown", "note-taking", "github", "local-first", "offline", "developer tools", "journaling", "privacy", "open source", "tiptap", "nextjs"],
+  openGraph: {
+    title: "Marlin - GitHub Native Notes",
+    description: "The local-first note-taking app that treats your GitHub repo as storage. No vendor lock-in, just Markdown.",
+    url: "https://marlinnotes.com",
+    siteName: "Marlin",
+    images: [
+      {
+        url: "/landing-hero.webp",
+        width: 1200,
+        height: 630,
+        alt: "Marlin App Interface",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Marlin - Your Notes. Your Repo.",
+    description: "Zero-latency, offline-first Markdown notes synced to GitHub.",
+    images: ["/landing-hero.webp"],
+  },
+  alternates: {
+    canonical: "https://marlinnotes.com",
+  },
+}
 
 export default async function MarketingPage() {
   const session = await auth()
