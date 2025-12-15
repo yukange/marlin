@@ -6,3 +6,6 @@ AUTH_GITHUB_SECRET=your-github-oauth-app-client-secret
 
 # 本地开发 URL
 AUTH_URL=http://localhost:3000
+
+# Analytics
+NEXT_PUBLIC_MICROSOFT_CLARITY_ID=your-clarity-project-id
