@@ -38,6 +38,8 @@ Unlike traditional cloud-based apps (Notion, Evernote), Marlin does not store yo
 
 It leverages **IndexedDB** for instant, offline-capable interactions, and syncs to GitHub in the background.
 
+👉 **Try it now at [marlinnotes.com](https://marlinnotes.com)**
+
 ## 🚀 Features
 
 - **⚡ Zero Latency**: Built on a Local-First architecture. Writing, searching, and navigating happens instantly in the browser.

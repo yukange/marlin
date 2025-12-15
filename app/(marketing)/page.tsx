@@ -9,20 +9,30 @@ import pkg from "@/package.json"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Marlin - Local-First Markdown Notes for GitHub",
-  description: "Experience zero-latency note-taking with full data sovereignty. Marlin syncs your Markdown notes directly to your private GitHub repository. Offline-first, Edge-powered.",
-  keywords: ["markdown", "note-taking", "github", "local-first", "offline", "developer tools", "journaling", "privacy", "open source", "tiptap", "nextjs"],
+  title: "Marlin Note App - Local First GitHub Note Taking",
+  description: "The ultimate local first markdown editor for developers. Marlin is a GitHub note taking app that syncs directly to your repo. Zero latency, full privacy.",
+  keywords: [
+    "marlin note app",
+    "github note taking",
+    "local first markdown editor",
+    "markdown notes",
+    "developer note app",
+    "offline markdown",
+    "github notes",
+    "private notes",
+    "open source note taking"
+  ],
   openGraph: {
-    title: "Marlin - GitHub Native Notes",
-    description: "The local-first note-taking app that treats your GitHub repo as storage. No vendor lock-in, just Markdown.",
+    title: "Marlin Note App - Local First GitHub Note Taking",
+    description: "The local-first markdown editor that treats your GitHub repo as storage. Secure, fast, and open source.",
     url: "https://marlinnotes.com",
-    siteName: "Marlin",
+    siteName: "Marlin Note App",
     images: [
       {
         url: "/landing-hero.webp",
         width: 1200,
         height: 630,
-        alt: "Marlin App Interface",
+        alt: "Marlin Note App Interface",
       },
     ],
     locale: "en_US",
@@ -30,8 +40,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Marlin - Your Notes. Your Repo.",
-    description: "Zero-latency, offline-first Markdown notes synced to GitHub.",
+    title: "Marlin Note App - Your Repo, Your Notes",
+    description: "The local first markdown editor for GitHub note taking. Zero-latency, offline-ready.",
     images: ["/landing-hero.webp"],
   },
   alternates: {
@@ -47,6 +57,27 @@ export default async function MarketingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-white font-sans">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'SoftwareApplication',
+            name: 'Marlin',
+            url: 'https://marlinnotes.com',
+            image: 'https://marlinnotes.com/landing-hero.webp',
+            operatingSystem: 'Web, Browser',
+            applicationCategory: 'ProductivityApplication',
+            offers: {
+              '@type': 'Offer',
+              price: '0',
+              priceCurrency: 'USD',
+            },
+            description: 'A GitHub-native, local-first note-taking application for developers.',
+            featureList: 'Local-first, GitHub sync, Markdown support, Offline capable'
+          }),
+        }}
+      />
       {/* 1. Navbar */}
       <header className="sticky top-0 z-50 w-full border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-xl">
         <div className="container max-w-7xl mx-auto flex h-16 items-center justify-between px-4 md:px-6">
