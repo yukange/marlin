@@ -47,40 +47,183 @@ export async function pushSingleNote(
   // Get note from database
   const note = await db.notes.get(noteId);
   if (!note) {
-    throw new Error(`Note ${noteId} not found`);
+    // Note might have been permanently deleted
+    return;
   }
   
-  // Skip if already synced
+  // Skip if already synced (checking both active and trash states)
   if (note.syncStatus === 'synced') {
     return;
   }
+
+  // Import locally to avoid circular deps
+  const { fetchGitHub, putFile } = await import('@/lib/client/github-api');
   
   try {
     // Mark as syncing
     await db.notes.update(noteId, { syncStatus: 'syncing' });
-    
-    // Prepare file content with frontmatter
+
+    // Prepare content (handles both active and deleted states via metadata)
     const fileContent = stringifyNote(note);
     const contentBase64 = btoa(
       String.fromCharCode(...new TextEncoder().encode(fileContent))
     );
     
-    // Upload to GitHub
-    const response = await putFile(
-      userLogin,
-      repoName,
-      `notes/${noteId}.md`,
-      contentBase64,
-      note.sha ? `Update note ${noteId}` : `Create note ${noteId}`,
-      note.sha // undefined for new notes
-    );
+    // Define paths
+    const activePath = `notes/${noteId}.md`;
+    const trashPath = `.trash/${noteId}.md`;
+
+    // --- BRANCH 1: SOFT DELETE (Move to .trash) ---
+    if (note.deleted) {
+      // 1. Upload to .trash/
+      // We don't have the SHA for the trash file usually (unless we tracked it), 
+      // but if it's a fresh move, it's a create (sha=undefined). 
+      // If it's an update to an already trashed note, we might need its SHA.
+      // For simplicity/robustness in MVP: Try create. If 409 (exists), fetch SHA and update.
+      let trashSha: string | undefined = undefined;
+      
+      try {
+         // Optimistic create/update
+         const res = await putFile(
+           userLogin,
+           repoName,
+           trashPath,
+           contentBase64,
+           `Move note ${noteId} to trash`,
+           trashSha // Undefined initially
+         );
+         trashSha = res.content.sha;
+      } catch (e: any) {
+         if (e.status === 409 || e.message?.includes('sha')) {
+            // File exists, fetch SHA and retry update
+            const existing = await fetchGitHub(`repos/${userLogin}/${repoName}/contents/${trashPath}`);
+            const res = await putFile(
+               userLogin,
+               repoName,
+               trashPath,
+               contentBase64,
+               `Update note ${noteId} in trash`,
+               existing.sha
+            );
+            trashSha = res.content.sha;
+         } else {
+            throw e;
+         }
+      }
+
+      // 2. Delete from notes/ (Cleanup)
+      // Use the known SHA from local DB (which refers to the active note)
+      if (note.sha && note.sha !== 'pending') {
+        try {
+           await fetchGitHub(`repos/${userLogin}/${repoName}/contents/${activePath}`, {
+             method: 'DELETE',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({
+               message: `Cleanup active note ${noteId}`,
+               sha: note.sha
+             })
+           });
+        } catch (e: any) {
+           if (e.status !== 404) {
+             console.warn(`Failed to cleanup active note ${noteId}:`, e);
+             // Non-fatal, just means it might not have existed or SHA mismatch
+           }
+        }
+      }
+
+      // 3. Update local state
+      await db.notes.update(noteId, {
+        sha: trashSha, // Track the SHA of the file in .trash
+        syncStatus: 'synced',
+        errorMessage: undefined,
+      });
+      return;
+    }
+
+    // --- BRANCH 2: RESTORE or UPDATE (Move to notes/) ---
+    // 1. Upload to notes/
+    // note.sha usually points to the file location. 
+    // If we just Restored, note.sha might point to the .trash file (from previous sync state).
+    // We need to be careful.
+    // Strategy: If we are restoring, treat as new file (sha=undefined) or check remote.
+    // Actually, if we are restoring, we want to CREATE in notes/ and DELETE from .trash/.
     
-    // Update local state on success
+    // If it was in trash previously, note.sha points to .trash/ file.
+    // We shouldn't use that SHA for notes/ path.
+    // Simple heuristic: If we think we are restoring (previous state was deleted?), reset SHA.
+    // But we don't track "previous state".
+    // Safer approach: Try PUT. If 409 (sha mismatch/missing), fetch active SHA.
+    // If 422 (sha provided but file missing), reset SHA.
+    
+    // Let's look at `putFile` wrapper. It handles basic PUT.
+    // We'll try to reuse SHA if it seems valid for active path.
+    // If it fails, we handle it.
+    
+    let response;
+    try {
+       response = await putFile(
+        userLogin,
+        repoName,
+        activePath,
+        contentBase64,
+        note.sha ? `Update note ${noteId}` : `Create note ${noteId}`,
+        note.sha
+      );
+    } catch (e: any) {
+       // If SHA was from .trash file, it won't work for notes/ file (which might not exist or has diff SHA).
+       // Fallback: Fetch SHA of notes/ file (if exists) or use null (create).
+       try {
+         const existing = await fetchGitHub(`repos/${userLogin}/${repoName}/contents/${activePath}`);
+         response = await putFile(
+            userLogin,
+            repoName,
+            activePath,
+            contentBase64,
+            `Update note ${noteId}`,
+            existing.sha
+         );
+       } catch (inner: any) {
+          if (inner.status === 404) {
+             // File doesn't exist, create it (sha = undefined)
+             response = await putFile(
+                userLogin,
+                repoName,
+                activePath,
+                contentBase64,
+                `Restore note ${noteId}`,
+                undefined
+             );
+          } else {
+             throw inner;
+          }
+       }
+    }
+
+    // 2. Delete from .trash/ (Cleanup if restoring)
+    // We don't track if we are specifically restoring, so we can just check if file exists in trash and kill it.
+    // To save API calls, maybe only do this if we suspect it was in trash?
+    // Cost of 404 is low.
+    try {
+       const trashFile = await fetchGitHub(`repos/${userLogin}/${repoName}/contents/${trashPath}`);
+       await fetchGitHub(`repos/${userLogin}/${repoName}/contents/${trashPath}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: `Cleanup trash note ${noteId}`,
+            sha: trashFile.sha
+          })
+       });
+    } catch (e: any) {
+       // Ignore 404 (not in trash)
+    }
+
+    // 3. Update local state
     await db.notes.update(noteId, {
       sha: response.content.sha,
       syncStatus: 'synced',
       errorMessage: undefined,
     });
+
   } catch (error: any) {
     // Handle 409 Conflict (remote has changed)
     if (error.message?.includes('409') || error.message?.includes('does not match')) {
@@ -92,7 +235,7 @@ export async function pushSingleNote(
       // Other errors (network, auth, etc.)
       await db.notes.update(noteId, {
         syncStatus: 'error',
-        errorMessage: error.message || 'Upload failed',
+        errorMessage: error.message || 'Sync failed',
       });
     }
     
@@ -169,11 +312,11 @@ export async function syncWorkspace(
   // Since fetchNotesTree doesn't return the tree SHA, we might rely on the earlier fetch or just return undefined if we missed it.
   // Actually, let's trust the one we got if we did.
   
-  // Build remote map (ID without .md suffix -> SHA)
-  const remoteMap = new Map<string, string>(
+  // Build remote map (ID without .md suffix -> { sha, path })
+  const remoteMap = new Map<string, { sha: string; path: string }>(
     noteFiles.map((f) => [
       f.path.split('/').pop()!.replace(/\.md$/, ''), // Strip .md suffix
-      f.sha
+      { sha: f.sha, path: f.path }
     ])
   );
   
@@ -214,6 +357,7 @@ export async function syncWorkspace(
         if (content) {
           try {
             const parsed = parseNote(content);
+            const isTrash = file.path.startsWith('.trash/');
             
             await db.notes.put({
               id: file.id,
@@ -223,6 +367,8 @@ export async function syncWorkspace(
               date: parsed.date,
               space: space,
               syncStatus: 'synced',
+              deleted: isTrash, // Enforce deleted status based on folder
+              deletedAt: isTrash ? (parsed.deletedAt || Date.now()) : undefined,
             });
             downloaded++;
           } catch (error) {
@@ -257,9 +403,97 @@ export async function syncWorkspace(
   const localNotesAfterPull = await db.notes.where('space').equals(space).toArray();
   
   for (const note of localNotesAfterPull) {
+    // Skip if already synced (whether active or deleted)
+    if (note.syncStatus === 'synced') continue;
+
+    // --- HANDLE DELETION (SOFT DELETE / MOVE) IN SLOW PATH ---
+    if (note.deleted) {
+      // Logic: Move to .trash/
+      // 1. Put to .trash/
+      // 2. Delete from notes/
+      
+      try {
+         await db.notes.update(note.id, { syncStatus: 'syncing' });
+         
+         // Import locally
+         const { fetchGitHub, putFile } = await import('@/lib/client/github-api');
+         
+         // 1. Upload to .trash/
+         const fileContent = stringifyNote(note);
+         const contentBase64 = btoa(
+           String.fromCharCode(...new TextEncoder().encode(fileContent))
+         );
+         
+         let trashSha: string | undefined = undefined;
+         
+         try {
+             const res = await putFile(
+               userLogin,
+               repoName,
+               `.trash/${note.id}.md`,
+               contentBase64,
+               `Sync move note ${note.id} to trash`,
+               undefined // Try create first
+             );
+             trashSha = res.content.sha;
+         } catch (e: any) {
+             // Handle both 409 (Conflict) and 422 (Unprocessable Entity - often means file exists but no SHA provided)
+             if (e.status === 409 || e.status === 422 || e.message?.includes('sha')) {
+                // Exists, fetch SHA and update
+                const existing = await fetchGitHub(`repos/${userLogin}/${repoName}/contents/.trash/${note.id}.md`);
+                const res = await putFile(
+                   userLogin,
+                   repoName,
+                   `.trash/${note.id}.md`,
+                   contentBase64,
+                   `Sync update note ${note.id} in trash`,
+                   existing.sha
+                );
+                trashSha = res.content.sha;
+             } else {
+                throw e;
+             }
+         }
+
+         // 2. Delete from notes/ (Cleanup)
+         const remoteInfo = remoteMap.get(note.id);
+         
+         // Only try to delete if it exists in 'notes/' directory remotely
+         if (remoteInfo && remoteInfo.path.startsWith('notes/')) {
+           try {
+              await fetchGitHub(`repos/${userLogin}/${repoName}/contents/notes/${note.id}.md`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  message: `Cleanup active note ${note.id}`,
+                  sha: remoteInfo.sha // Use the correct SHA from the correct path
+                }),
+              });
+           } catch (e: any) {
+              // Ignore 404
+           }
+         }
+         
+         await db.notes.update(note.id, {
+             sha: trashSha,
+             syncStatus: 'synced',
+             errorMessage: undefined
+         });
+         uploaded++;
+      } catch (e: any) {
+         console.error(`Failed to sync deletion for ${note.id}:`, e);
+         await db.notes.update(note.id, {
+           syncStatus: 'error',
+           errorMessage: e.message || 'Delete sync failed'
+         });
+      }
+      continue;
+    }
+
     if (['pending', 'modified', 'error'].includes(note.syncStatus)) {
       
-      const remoteSha = remoteMap.get(note.id);
+      const remoteInfo = remoteMap.get(note.id);
+      const remoteSha = remoteInfo?.sha;
       
       // Conflict detection
       const hasConflict = (

@@ -9,13 +9,15 @@ import { db } from '@/lib/client/db'
  * - Date filtering
  * - Search query matching (content and tags)
  * - Sorted by date descending
+ * - Trash view support
  * 
  * @param space - Space name (without .marlin suffix)
  * @param searchQuery - Search query string
  * @param filterDate - Date filter (ISO date string)
+ * @param isInTrash - Whether to show deleted notes (default: false)
  * @returns Filtered notes array or undefined during loading
  */
-export function useNotes(space: string, searchQuery = '', filterDate = '') {
+export function useNotes(space: string, searchQuery = '', filterDate = '', isInTrash = false) {
   const notes = useLiveQuery(
     async () => {
       const lowerQuery = searchQuery.trim().toLowerCase()
@@ -23,11 +25,15 @@ export function useNotes(space: string, searchQuery = '', filterDate = '') {
       // Optimization: Default view (Space Only)
       // Use compound index [space+date] to fetch sorted results directly from DB engine
       if (!lowerQuery && !filterDate.trim()) {
-        return db.notes
+        const collection = db.notes
           .where('[space+date]')
           .between([space, Dexie.minKey], [space, Dexie.maxKey])
           .reverse()
-          .toArray()
+
+        // Filter by deleted status
+        // Note: Dexie filters are applied in memory after fetching from index, 
+        // but it's still faster than full table scan.
+        return collection.filter(n => !!n.deleted === isInTrash).toArray()
       }
 
       const isTagSearch = lowerQuery.startsWith('#') && lowerQuery.length > 1
@@ -62,6 +68,9 @@ export function useNotes(space: string, searchQuery = '', filterDate = '') {
           })
         }
 
+        // Filter by deleted status
+        filteredNotes = filteredNotes.filter(n => !!n.deleted === isInTrash)
+
         // Sort by date descending
         return filteredNotes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       }
@@ -70,6 +79,9 @@ export function useNotes(space: string, searchQuery = '', filterDate = '') {
       let collection = db.notes
         .where('space')
         .equals(space)
+
+      // Apply deleted filter
+      collection = collection.filter(n => !!n.deleted === isInTrash)
 
       // Date filtering
       if (filterDate.trim()) {
@@ -102,7 +114,7 @@ export function useNotes(space: string, searchQuery = '', filterDate = '') {
       const sortedNotes = await collection.sortBy('date')
       return sortedNotes.reverse()
     },
-    [space, searchQuery, filterDate]
+    [space, searchQuery, filterDate, isInTrash]
   )
 
   return notes

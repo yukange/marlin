@@ -354,10 +354,42 @@ export function useNoteMutations() {
     try {
       const { deleteNote: deleteNoteService } = await import('@/lib/services/note-service')
       await deleteNoteService(id, space, user.login)
-      toast.success('Note deleted')
+      toast.success('Note moved to trash')
     } catch (error) {
       console.error('Failed to delete note:', error)
-      toast.error('Failed to delete note from GitHub')
+      toast.error('Failed to delete note')
+      throw error
+    }
+  }
+
+  const restoreNote = async (id: string, space: string) => {
+    if (!user) {
+      toast.error('User not authenticated')
+      return
+    }
+    try {
+      const { restoreNote: restoreNoteService } = await import('@/lib/services/note-service')
+      await restoreNoteService(id, space, user.login)
+      toast.success('Note restored')
+    } catch (error) {
+      console.error('Failed to restore note:', error)
+      toast.error('Failed to restore note')
+      throw error
+    }
+  }
+
+  const permanentDeleteNote = async (id: string, space: string) => {
+    if (!user) {
+      toast.error('User not authenticated')
+      return
+    }
+    try {
+      const { permanentDeleteNote: permanentDeleteNoteService } = await import('@/lib/services/note-service')
+      await permanentDeleteNoteService(id, space, user.login)
+      toast.success('Note permanently deleted')
+    } catch (error) {
+      console.error('Failed to delete note permanently:', error)
+      toast.error('Failed to delete note')
       throw error
     }
   }
@@ -382,6 +414,8 @@ export function useNoteMutations() {
     createNote,
     updateNote,
     deleteNote,
+    restoreNote,
+    permanentDeleteNote,
     retrySync,
   }
 }

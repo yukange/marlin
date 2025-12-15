@@ -159,7 +159,7 @@ export async function fetchRemoteTreeSha(
 }
 
 /**
- * Fetch notes tree using GraphQL (HEAD:notes)
+ * Fetch notes tree using GraphQL (HEAD:notes and HEAD:.trash)
  */
 export async function fetchNotesTree(
   owner: string,
@@ -168,7 +168,16 @@ export async function fetchNotesTree(
   const query = `
     query($owner: String!, $repo: String!) {
       repository(owner: $owner, name: $repo) {
-        object(expression: "HEAD:notes") {
+        notesTree: object(expression: "HEAD:notes") {
+          ... on Tree {
+            entries {
+              name
+              type
+              oid
+            }
+          }
+        }
+        trashTree: object(expression: "HEAD:.trash") {
           ... on Tree {
             entries {
               name
@@ -182,15 +191,33 @@ export async function fetchNotesTree(
   `;
 
   const data = await fetchGraphQL(query, { owner, repo });
-  const entries = data.repository?.object?.entries || [];
+  const results: Array<{ path: string; sha: string; type: 'blob' }> = [];
+
+  // Process notes/ directory
+  const notesEntries = data.repository?.notesTree?.entries || [];
+  notesEntries.forEach((e: any) => {
+    if (e.type === 'blob' && e.name.endsWith('.md')) {
+      results.push({
+        path: `notes/${e.name}`,
+        sha: e.oid,
+        type: 'blob',
+      });
+    }
+  });
+
+  // Process .trash/ directory
+  const trashEntries = data.repository?.trashTree?.entries || [];
+  trashEntries.forEach((e: any) => {
+    if (e.type === 'blob' && e.name.endsWith('.md')) {
+      results.push({
+        path: `.trash/${e.name}`,
+        sha: e.oid,
+        type: 'blob',
+      });
+    }
+  });
   
-  return entries
-    .filter((e: any) => e.type === 'blob' && e.name.endsWith('.md'))
-    .map((e: any) => ({
-      path: `notes/${e.name}`,
-      sha: e.oid,
-      type: 'blob' as const,
-    }));
+  return results;
 }
 
 /**

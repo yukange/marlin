@@ -6,7 +6,7 @@ import { useNotes } from '@/hooks/use-notes'
 import { useNoteMutations } from '@/hooks/use-composer'
 import { useConfirmDialogStore } from '@/hooks/use-confirm-dialog'
 import { formatRelativeTime, formatPreciseTime } from '@/lib/utils/date'
-import { MoreHorizontal, Trash2, ExternalLink, ChevronDown, ChevronUp, Edit, RefreshCw } from 'lucide-react'
+import { MoreHorizontal, Trash2, ExternalLink, ChevronDown, ChevronUp, Edit, RefreshCw, ArchiveRestore } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -23,19 +23,31 @@ import { NoteContent } from './note-content'
 
 const MAX_LINES = 12
 
-
-
 interface NoteCardProps {
   note: Note
   onDelete: (note: Note) => void
   onEdit: (note: Note) => void
   onRetrySync: (note: Note) => void
   onTagClick: (tag: string) => void
+  onRestore?: (note: Note) => void
+  onPermanentDelete?: (note: Note) => void
   space: string
   highlight?: string
+  isInTrash?: boolean
 }
 
-function NoteCard({ note, onDelete, onEdit, onRetrySync, onTagClick, space, highlight }: NoteCardProps) {
+function NoteCard({
+  note,
+  onDelete,
+  onEdit,
+  onRetrySync,
+  onTagClick,
+  onRestore,
+  onPermanentDelete,
+  space,
+  highlight,
+  isInTrash
+}: NoteCardProps) {
   const { data: user } = useGitHubUser()
   const [isExpanded, setIsExpanded] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -49,7 +61,7 @@ function NoteCard({ note, onDelete, onEdit, onRetrySync, onTagClick, space, high
     if (contentRef.current) {
       setFullHeight(contentRef.current.scrollHeight)
     }
-  }, [content, isExpanded]) // Update height when content or expanded state changes
+  }, [content, isExpanded])
 
   const handleOpenInGitHub = () => {
     if (!user) return
@@ -67,7 +79,7 @@ function NoteCard({ note, onDelete, onEdit, onRetrySync, onTagClick, space, high
     },
     pending: {
       color: 'bg-amber-400 dark:bg-amber-500',
-      tooltip: 'New note, not synced yet',
+      tooltip: isInTrash ? 'Pending deletion...' : 'New note, not synced yet',
       animate: false
     },
     modified: {
@@ -88,21 +100,30 @@ function NoteCard({ note, onDelete, onEdit, onRetrySync, onTagClick, space, high
   }[syncStatus]
 
   return (
-    <article className="dark:bg-zinc-900 rounded-xl p-3 shadow-sm hover:shadow-md dark:shadow-zinc-800/50 dark:hover:shadow-zinc-800 transition-shadow relative border dark:border-zinc-800">
+    <article 
+      className={cn(
+        "rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow relative border",
+        isInTrash 
+          ? "bg-zinc-50 dark:bg-zinc-900/30 border-zinc-200 dark:border-zinc-800/50 opacity-80 hover:opacity-100 grayscale-[0.3]" 
+          : "dark:bg-zinc-900 dark:shadow-zinc-800/50 dark:hover:shadow-zinc-800 dark:border-zinc-800"
+      )}
+    >
       <header className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <time>
-                  {formatRelativeTime(note.date)}
+                  {formatRelativeTime(note.deleted && note.deletedAt ? note.deletedAt : note.date)}
+                  {isInTrash && <span className="ml-1 text-zinc-400">(Deleted)</span>}
                 </time>
               </TooltipTrigger>
               <TooltipContent 
                 side="bottom" 
                 className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 shadow-md"
               >
-                <p>{formatPreciseTime(note.date)}</p>
+                <p>Created: {formatPreciseTime(note.date)}</p>
+                {note.deletedAt && <p>Deleted: {formatPreciseTime(note.deletedAt)}</p>}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -116,11 +137,15 @@ function NoteCard({ note, onDelete, onEdit, onRetrySync, onTagClick, space, high
                   e.stopPropagation()
                   onTagClick(tag)
                 }}
+                disabled={isInTrash}
                 className={cn(
-                  "inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer",
-                  isHighlighted
+                  "inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors",
+                  isInTrash 
+                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-default"
+                    : "cursor-pointer",
+                  !isInTrash && (isHighlighted
                     ? "bg-yellow-200 dark:bg-yellow-900 text-black dark:text-yellow-100 hover:bg-yellow-300 dark:hover:bg-yellow-800"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-200"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-200")
                 )}
               >
                 #{tag}
@@ -156,6 +181,7 @@ function NoteCard({ note, onDelete, onEdit, onRetrySync, onTagClick, space, high
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
+              {/* Error Retry */}
               {syncStatus === 'error' && (
                 <>
                   <DropdownMenuItem onClick={() => onRetrySync(note)} className="text-amber-600 dark:text-amber-400">
@@ -165,22 +191,44 @@ function NoteCard({ note, onDelete, onEdit, onRetrySync, onTagClick, space, high
                   <DropdownMenuSeparator />
                 </>
               )}
-              <DropdownMenuItem onClick={() => onEdit(note)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleOpenInGitHub}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open in GitHub
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onDelete(note)}
-                className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+
+              {/* Trash Actions */}
+              {isInTrash ? (
+                <>
+                  <DropdownMenuItem onClick={() => onRestore?.(note)}>
+                    <ArchiveRestore className="mr-2 h-4 w-4" />
+                    Restore
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onPermanentDelete?.(note)}
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Forever
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                /* Active Actions */
+                <>
+                  <DropdownMenuItem onClick={() => onEdit(note)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleOpenInGitHub}>
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open in GitHub
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onDelete(note)}
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Move to Trash
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -191,6 +239,7 @@ function NoteCard({ note, onDelete, onEdit, onRetrySync, onTagClick, space, high
           ref={contentRef}
           className={cn(
             "max-w-none break-words overflow-hidden transition-[max-height] duration-300 ease-in-out",
+            isInTrash && "opacity-80" // Slightly dim content in trash
           )}
           style={{
             maxHeight: !shouldShowExpandButton 
@@ -204,7 +253,10 @@ function NoteCard({ note, onDelete, onEdit, onRetrySync, onTagClick, space, high
         </div>
 
         {!isExpanded && shouldShowExpandButton && (
-          <footer className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-zinc-900 via-white/60 dark:via-zinc-900/60 to-transparent flex items-end justify-center pb-2 pointer-events-none transition-opacity duration-300">
+          <footer className={cn(
+            "absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t via-white/60 dark:via-zinc-900/60 to-transparent flex items-end justify-center pb-2 pointer-events-none transition-opacity duration-300",
+            isInTrash ? "from-zinc-50 dark:from-zinc-950" : "from-white dark:from-zinc-900"
+          )}>
             <Button
               variant="ghost"
               size="sm"
@@ -241,11 +293,12 @@ interface NoteStreamProps {
   filterDate?: string
   onEditNote?: (content: string, noteId: string) => void
   onTagClick?: (tag: string) => void
+  isInTrash?: boolean
 }
 
-export function NoteStream({ space, searchQuery = '', filterDate = '', onEditNote, onTagClick }: NoteStreamProps) {
-  const notes = useNotes(space, searchQuery, filterDate)
-  const { deleteNote, retrySync } = useNoteMutations()
+export function NoteStream({ space, searchQuery = '', filterDate = '', onEditNote, onTagClick, isInTrash = false }: NoteStreamProps) {
+  const notes = useNotes(space, searchQuery, filterDate, isInTrash)
+  const { deleteNote, restoreNote, permanentDeleteNote, retrySync } = useNoteMutations()
   const openDialog = useConfirmDialogStore((state) => state.openDialog)
 
   const handleEdit = (note: Note) => {
@@ -257,19 +310,46 @@ export function NoteStream({ space, searchQuery = '', filterDate = '', onEditNot
   }
 
   const handleDelete = async (note: Note) => {
+    await deleteNote(note.id, space)
+  }
+
+  const handleRestore = async (note: Note) => {
+    await restoreNote(note.id, space)
+  }
+
+  const handlePermanentDelete = async (note: Note) => {
     openDialog({
-      title: 'Delete Note?',
-      description: 'This note will be permanently deleted. This action cannot be undone.',
-      confirmText: 'Delete',
+      title: 'Delete Forever?',
+      description: 'This note will be permanently deleted from GitHub and cannot be recovered.',
+      confirmText: 'Delete Forever',
       cancelText: 'Cancel',
       variant: 'destructive',
       onConfirm: async () => {
-        await deleteNote(note.id, space)
+        await permanentDeleteNote(note.id, space)
       },
     })
   }
 
   if (!notes) return null
+  if (notes.length === 0) {
+    if (isInTrash) {
+      return (
+        <div className="flex flex-col items-center justify-center h-48 text-zinc-500 text-sm">
+          <Trash2 className="h-8 w-8 mb-2 opacity-50" />
+          <p>Trash is empty</p>
+        </div>
+      )
+    }
+    // Only show empty state if not filtering (to avoid showing "No notes" when search yields nothing if we want different UI for search)
+    // But for now, simple empty is fine.
+    if (!searchQuery && !filterDate) {
+      return (
+        <div className="flex flex-col items-center justify-center h-48 text-zinc-500 text-sm">
+          <p>No notes yet</p>
+        </div>
+      )
+    }
+  }
 
   return (
     <section className="flex flex-col-reverse min-h-0 gap-3">
@@ -281,8 +361,11 @@ export function NoteStream({ space, searchQuery = '', filterDate = '', onEditNot
           onEdit={handleEdit}
           onRetrySync={handleRetrySync}
           onTagClick={onTagClick || (() => {})}
+          onRestore={handleRestore}
+          onPermanentDelete={handlePermanentDelete}
           space={space}
           highlight={searchQuery}
+          isInTrash={isInTrash}
         />
       ))}
     </section>

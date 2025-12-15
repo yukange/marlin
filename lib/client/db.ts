@@ -21,6 +21,8 @@ export interface Note {
   sha?: string; // Git blob SHA for sync diffing (undefined for new notes)
   syncStatus: 'synced' | 'modified' | 'pending' | 'syncing' | 'error';
   errorMessage?: string; // Error details if syncStatus === 'error'
+  deleted?: boolean; // true: deleted (in trash), false/undefined: active
+  deletedAt?: number; // Unix timestamp when note was moved to trash
 }
 
 export interface Space {
@@ -76,6 +78,17 @@ db.version(4).stores({
   spaces: 'name, repoName, updatedAt'
 });
 
+// Version 5: Add 'deleted' field (boolean) and 'deletedAt' for Soft Deletes (Tombstones)
+db.version(5).stores({
+  notes: 'id, sha, content, *tags, date, space, syncStatus, deleted, deletedAt, [space+date]',
+  spaces: 'name, repoName, updatedAt'
+}).upgrade(tx => {
+  return tx.table('notes').toCollection().modify(note => {
+    note.deleted = false
+    note.deletedAt = undefined
+  })
+});
+
 /**
  * Check if there are any unsynced changes in the database
  * 
@@ -86,5 +99,11 @@ export async function hasUnsyncedChanges(): Promise<boolean> {
     .where('syncStatus')
     .anyOf(['pending', 'modified', 'syncing', 'error'])
     .count();
-  return unsyncedCount > 0;
+    
+  // Also check for pending deletions (tombstones)
+  const pendingDeletions = await db.notes
+    .filter(n => n.deleted === true && n.syncStatus !== 'synced')
+    .count();
+
+  return unsyncedCount > 0 || pendingDeletions > 0;
 }

@@ -17,6 +17,8 @@ export interface ParsedNote {
   content: string; // Pure markdown content (frontmatter stripped)
   tags: string[];
   date: number;
+  deleted?: boolean;
+  deletedAt?: number;
 }
 
 /**
@@ -27,6 +29,8 @@ export interface ParsedNote {
  * ---
  * tags: [tag1, tag2]
  * date: 1700000000001
+ * deleted: true
+ * deletedAt: 1700000099999
  * ---
  * 
  * Note content here...
@@ -42,6 +46,8 @@ export function parseNote(raw: string): ParsedNote {
     content: content.trim(),
     tags: Array.isArray(data.tags) ? data.tags : [],
     date: typeof data.date === 'number' ? data.date : Date.now(),
+    deleted: typeof data.deleted === 'boolean' ? data.deleted : undefined,
+    deletedAt: typeof data.deletedAt === 'number' ? data.deletedAt : undefined,
   };
 }
 
@@ -53,6 +59,8 @@ export function parseNote(raw: string): ParsedNote {
  * ---
  * tags: [tag1, tag2]
  * date: 1700000000001
+ * deleted: true
+ * deletedAt: 1700000099999
  * ---
  * 
  * Note content here...
@@ -61,11 +69,21 @@ export function parseNote(raw: string): ParsedNote {
  * @param note - Note object from database
  * @returns Markdown string with frontmatter
  */
-export function stringifyNote(note: Pick<Note, 'content' | 'tags' | 'date'>): string {
-  const frontmatter = {
+export function stringifyNote(
+  note: Pick<Note, 'content' | 'tags' | 'date' | 'deleted' | 'deletedAt'>
+): string {
+  const frontmatter: Record<string, any> = {
     tags: note.tags,
     date: note.date,
   };
+
+  // Only include deleted fields if relevant to keep frontmatter clean
+  if (note.deleted) {
+    frontmatter.deleted = true;
+    if (note.deletedAt) {
+      frontmatter.deletedAt = note.deletedAt;
+    }
+  }
   
   return matter.stringify(note.content, frontmatter);
 }

@@ -103,16 +103,17 @@ export async function updateNote(input: UpdateNoteInput): Promise<void> {
 }
 
 /**
- * Delete a note from both GitHub and local database
+ * Delete a note (Soft Delete / Move to Trash)
  * 
- * Flow:
- * 1. Delete from GitHub first (to ensure data safety)
- * 2. Delete from local database after successful remote deletion
+ * Local-First Strategy:
+ * 1. Mark as deleted locally (immediate UI update)
+ * 2. Record deletion time (for future auto-cleanup)
+ * 3. Trigger background sync to move file to .trash/ on GitHub
  * 
  * @param id - Note ID
  * @param space - Space name without .marlin suffix (e.g., "work")
  * @param userLogin - GitHub username
- * @throws {Error} If note not found or GitHub deletion fails
+ * @throws {Error} If note not found
  */
 export async function deleteNote(
   id: string,
@@ -124,34 +125,113 @@ export async function deleteNote(
     throw new Error('Note not found');
   }
 
-  // Import services dynamically to avoid circular dependency
+  // 1. Soft delete locally
+  await db.notes.update(id, {
+    deleted: true,
+    deletedAt: Date.now(),
+    syncStatus: 'pending', // Mark as pending to trigger sync
+  });
+
+  // 2. Trigger background sync
+  const { pushSingleNote } = await import('@/lib/services/sync-service');
+  
+  pushSingleNote(id, space, userLogin).catch((error: any) => {
+    console.error(`Background delete failed for note ${id}:`, error);
+  });
+}
+
+/**
+ * Restore a note from Trash
+ * 
+ * @param id - Note ID
+ * @param space - Space name
+ * @param userLogin - GitHub username
+ */
+export async function restoreNote(
+  id: string,
+  space: string,
+  userLogin: string
+): Promise<void> {
+  const note = await db.notes.get(id);
+  if (!note) {
+    throw new Error('Note not found');
+  }
+
+  // 1. Restore locally
+  await db.notes.update(id, {
+    deleted: false,
+    deletedAt: undefined,
+    syncStatus: 'pending',
+  });
+
+  // 2. Trigger background sync
+  const { pushSingleNote } = await import('@/lib/services/sync-service');
+  
+  pushSingleNote(id, space, userLogin).catch((error: any) => {
+    console.error(`Background restore failed for note ${id}:`, error);
+  });
+}
+
+/**
+ * Permanently delete a note (Hard Delete)
+ * 
+ * Removes from local DB and triggers permanent removal from GitHub .trash/
+ * 
+ * @param id - Note ID
+ * @param space - Space name
+ * @param userLogin - GitHub username
+ */
+export async function permanentDeleteNote(
+  id: string,
+  space: string,
+  userLogin: string
+): Promise<void> {
+  const note = await db.notes.get(id);
+  if (!note) {
+    throw new Error('Note not found');
+  }
+
+  // Import services dynamically
   const { fetchGitHub } = await import('@/lib/client/github-api');
   const { spaceToRepo } = await import('@/lib/services/space-service');
 
-  // Convert space name to repo name
   const repoName = spaceToRepo(space);
   const repoPath = `repos/${userLogin}/${repoName}`;
 
-  // Get SHA if needed
-  let sha = note.sha;
-  if (sha === 'pending' || !sha) {
-    const res = await fetchGitHub(`${repoPath}/contents/notes/${id}.md`);
-    sha = res.sha;
+  // Try to delete from GitHub .trash/ (Best effort)
+  try {
+    // Get SHA of the file in .trash/
+    // We might have it in local DB if sync caught up, otherwise try to fetch
+    let sha = note.sha;
+    
+    // If local SHA is missing or we suspect it's stale, try fetch from .trash
+    if (!sha || sha === 'pending') {
+       try {
+         const res = await fetchGitHub(`${repoPath}/contents/.trash/${id}.md`);
+         sha = res.sha;
+       } catch (e: any) {
+         if (e.status !== 404) throw e;
+         // If 404, file is already gone from remote, which is fine
+       }
+    }
+
+    if (sha) {
+      await fetchGitHub(`${repoPath}/contents/.trash/${id}.md`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Permanent delete note ${id}`,
+          sha,
+        }),
+      });
+    }
+  } catch (error) {
+    console.error(`Failed to permanently delete remote file ${id}:`, error);
+    // We continue to delete locally even if remote fails (user wants it gone)
+    // Ideally we should queue this, but for MVP local-first, cleaning local is priority.
   }
 
-  // Delete from GitHub first
-  await fetchGitHub(`${repoPath}/contents/notes/${id}.md`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message: `Delete note ${id}`,
-      sha,
-    }),
-  });
-
-  // Delete from local database after successful remote deletion
+  // Delete from local database
   await db.notes.delete(id);
 }
 
@@ -159,36 +239,42 @@ export async function deleteNote(
  * Get a single note by ID
  * 
  * @param id - Note ID
- * @returns Note object or undefined if not found
+ * @returns Note object or undefined if not found or deleted
  */
 export async function getNote(id: string): Promise<Note | undefined> {
-  return db.notes.get(id);
+  const note = await db.notes.get(id);
+  if (note?.deleted) return undefined;
+  return note;
 }
 
 /**
- * List all notes in a space (sorted by date descending)
- * 
- * @param space - Space name without .marlin suffix (e.g., "work")
- * @returns Array of notes, newest first
+ * List all active notes in a space (sorted by date descending)
+ * Filters out deleted notes.
  */
 export async function listNotes(space: string): Promise<Note[]> {
   return db.notes
     .where('space')
     .equals(space)
+    .filter(note => !note.deleted)
     .reverse()
     .sortBy('date');
 }
 
 /**
+ * List all notes in Trash for a space
+ */
+export async function listTrashNotes(space: string): Promise<Note[]> {
+  return db.notes
+    .where('space')
+    .equals(space)
+    .filter(note => note.deleted === true)
+    .reverse()
+    .sortBy('deletedAt');
+}
+
+/**
  * Search notes by query string
- * 
- * Searches in:
- * - Note content (case-insensitive)
- * - Tags (case-insensitive)
- * 
- * @param space - Space name without .marlin suffix (e.g., "work")
- * @param query - Search query string
- * @returns Filtered notes matching query
+ * Only searches active notes.
  */
 export async function searchNotes(space: string, query: string): Promise<Note[]> {
   const allNotes = await listNotes(space);
@@ -198,22 +284,14 @@ export async function searchNotes(space: string, query: string): Promise<Note[]>
   const lowerQuery = query.toLowerCase();
   
   return allNotes.filter(note => {
-    // Search in content
     if (note.content.toLowerCase().includes(lowerQuery)) return true;
-    
-    // Search in tags
     if (note.tags.some(tag => tag.toLowerCase().includes(lowerQuery))) return true;
-    
     return false;
   });
 }
 
 /**
- * Get notes by tag
- * 
- * @param space - Space name without .marlin suffix (e.g., "work")
- * @param tag - Tag to filter by (case-insensitive)
- * @returns Notes containing the specified tag
+ * Get notes by tag (Active only)
  */
 export async function getNotesByTag(space: string, tag: string): Promise<Note[]> {
   const lowerTag = tag.toLowerCase();
@@ -221,19 +299,20 @@ export async function getNotesByTag(space: string, tag: string): Promise<Note[]>
   return db.notes
     .where('space')
     .equals(space)
-    .filter(note => note.tags.some(t => t.toLowerCase() === lowerTag))
+    .filter(note => !note.deleted && note.tags.some(t => t.toLowerCase() === lowerTag))
     .reverse()
     .sortBy('date');
 }
 
 /**
- * Get all unique tags in a space
- * 
- * @param space - Space name without .marlin suffix (e.g., "work")
- * @returns Array of unique tags, sorted alphabetically
+ * Get all unique tags in a space (Active notes only)
  */
 export async function getAllTags(space: string): Promise<string[]> {
-  const notes = await db.notes.where('space').equals(space).toArray();
+  const notes = await db.notes
+    .where('space')
+    .equals(space)
+    .filter(note => !note.deleted)
+    .toArray();
   
   const tagSet = new Set<string>();
   notes.forEach(note => {
@@ -244,12 +323,7 @@ export async function getAllTags(space: string): Promise<string[]> {
 }
 
 /**
- * Get note count by sync status
- * 
- * Useful for UI indicators (e.g., "3 pending", "1 error")
- * 
- * @param space - Space name without .marlin suffix (e.g., "work")
- * @returns Object with counts for each status
+ * Get note count by sync status (Active notes only)
  */
 export async function getNoteStatusCounts(space: string): Promise<{
   total: number;
@@ -259,7 +333,11 @@ export async function getNoteStatusCounts(space: string): Promise<{
   syncing: number;
   error: number;
 }> {
-  const notes = await db.notes.where('space').equals(space).toArray();
+  const notes = await db.notes
+    .where('space')
+    .equals(space)
+    .filter(note => !note.deleted)
+    .toArray();
   
   const counts = {
     total: notes.length,

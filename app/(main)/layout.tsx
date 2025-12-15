@@ -34,10 +34,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 h-14">
-        <MobileSidebar />
-        <h1 className="font-semibold">Marlin</h1>
-      </header>
+      <MobileSidebar />
 
       <div className="hidden md:grid md:place-items-center min-h-screen">
         <div className="grid grid-cols-[300px_1fr] w-full max-w-[1020px]">
@@ -48,7 +45,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <main className="md:hidden pt-14">{children}</main>
+      <main className="md:hidden min-h-screen flex flex-col">{children}</main>
     </>
   )
 }

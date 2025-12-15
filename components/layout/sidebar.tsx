@@ -8,11 +8,12 @@ import { Heatmap } from "@/components/layout/heatmap"
 import { NewSpaceForm } from "@/components/layout/new-space-form"
 import { cn } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, Hash } from "lucide-react"
+import { Menu, Hash, Trash2, Library } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useRouter, useParams, useSearchParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams, usePathname } from "next/navigation"
 import { useLiveQuery } from "dexie-react-hooks"
 import { db } from "@/lib/client/db"
+import { useSidebar } from "@/components/layout/sidebar-context"
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   showNewSpace?: boolean
@@ -23,8 +24,13 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   
   const currentSpaceName = params.space as string
+  const currentQuery = searchParams.get('q') || ''
+  
+  const isTrashActive = pathname?.endsWith('/trash')
+  const isAllNotesActive = pathname === `/${currentSpaceName}` && !currentQuery && !isTrashActive
 
   const allTags = useLiveQuery(
     async () => {
@@ -33,6 +39,7 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
       const notes = await db.notes
         .where('space')
         .equals(currentSpaceName)
+        .filter(note => !note.deleted)
         .toArray()
       
       const tagSet = new Set<string>()
@@ -66,8 +73,6 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
     
     router.push(`/${currentSpaceName}?${params.toString()}`)
   }
-
-  const currentQuery = searchParams.get('q') || ''
 
   return (
     <aside className={cn("flex flex-col h-screen dark:bg-zinc-950 backdrop-blur-xl w-[300px] p-[10px] overflow-hidden", className)}>
@@ -114,9 +119,28 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
             <Heatmap space={currentSpaceName} />
           </section>
         )}
+        
+        {currentSpaceName && (
+          <div className="flex-shrink-0">
+            <button
+              type="button"
+              className={cn(
+                "w-full flex items-center justify-start px-3 py-2 text-sm rounded-md transition-colors",
+                isAllNotesActive 
+                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium" 
+                  : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+              )}
+              onClick={() => router.push(`/${currentSpaceName}`)}
+            >
+              <Library className="mr-2 h-4 w-4" />
+              All Notes
+            </button>
+          </div>
+        )}
+
         {currentSpaceName && allTags && allTags.length > 0 && (
           <section className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <h2 className="mb-2 text-lg font-semibold tracking-tight dark:text-zinc-100 flex-shrink-0">
+            <h2 className="mb-2 text-lg font-semibold tracking-tight dark:text-zinc-100 flex-shrink-0 px-3">
               Tags
             </h2>
             <ul className="flex-1 overflow-y-auto space-y-1 min-h-0 [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full">
@@ -143,6 +167,18 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
             </ul>
           </section>
         )}
+        {currentSpaceName && (
+          <div className="flex-shrink-0 mt-auto pt-2">
+             <Button
+               variant={isTrashActive ? "secondary" : "ghost"}
+               className={cn("w-full justify-start text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200", isTrashActive && "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100")}
+               onClick={() => router.push(`/${currentSpaceName}/trash`)}
+             >
+               <Trash2 className="mr-2 h-4 w-4" />
+               Trash
+             </Button>
+          </div>
+        )}
       </nav>
       <footer className="flex-shrink-0 mt-2">
         <UserNav />
@@ -152,18 +188,13 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
 }
 
 export function MobileSidebar() {
-  const [mobileOpen, setMobileOpen] = React.useState(false)
+  const { sidebarOpen, setSidebarOpen } = useSidebar()
   
   return (
-    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" className="md:hidden">
-          <Menu />
-        </Button>
-      </SheetTrigger>
+    <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <SheetContent side="left" className="p-0 w-72">
         <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-        <MobileSidebarContent onClose={() => setMobileOpen(false)} />
+        <MobileSidebarContent onClose={() => setSidebarOpen(false)} />
       </SheetContent>
     </Sheet>
   )
