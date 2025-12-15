@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     siteName: "Marlin Note App",
     images: [
       {
-        url: "/landing-hero.webp",
+        url: "/landing-hero.avif",
         width: 1200,
         height: 630,
         alt: "Marlin Note App Interface",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Marlin Note App - Your Repo, Your Notes",
     description: "The local first markdown editor for GitHub note taking. Zero-latency, offline-ready.",
-    images: ["/landing-hero.webp"],
+    images: ["/landing-hero.avif"],
   },
   alternates: {
     canonical: "https://marlinnotes.com",
@@ -65,7 +65,7 @@ export default async function MarketingPage() {
             '@type': 'SoftwareApplication',
             name: 'Marlin',
             url: 'https://marlinnotes.com',
-            image: 'https://marlinnotes.com/landing-hero.webp',
+            image: 'https://marlinnotes.com/landing-hero.avif',
             operatingSystem: 'Web, Browser',
             applicationCategory: 'ProductivityApplication',
             offers: {
@@ -127,7 +127,7 @@ export default async function MarketingPage() {
             
             <div className="relative rounded-[32px] border border-zinc-800 bg-zinc-900/50 shadow-2xl backdrop-blur-sm overflow-hidden">
                 <Image 
-                  src="/landing-hero.webp" 
+                  src="/landing-hero.avif" 
                   alt="Marlin App Interface" 
                   width={2040} 
                   height={1890} 
@@ -254,7 +254,7 @@ export default async function MarketingPage() {
                <div className="relative w-full max-w-lg aspect-[1.4/1] transform transition-transform duration-700 group-hover:scale-[1.02]">
                  {/* Image 1: Type a note (Default) */}
                  <Image 
-                   src="/landing-feature-stream.webp" 
+                   src="/landing-feature-stream.avif" 
                    alt="Type a note interface"
                    fill
                    className="object-contain drop-shadow-2xl transition-all duration-700 ease-in-out opacity-100 scale-100 blur-0 group-hover:opacity-0 group-hover:scale-95 group-hover:blur-sm"
@@ -262,7 +262,7 @@ export default async function MarketingPage() {
                  
                  {/* Image 2: New note (Hover) */}
                  <Image 
-                   src="/landing-feature-composer.webp" 
+                   src="/landing-feature-composer.avif" 
                    alt="Rich text composer"
                    fill
                    className="object-contain drop-shadow-2xl transition-all duration-700 ease-in-out opacity-0 scale-105 blur-sm group-hover:opacity-100 group-hover:scale-100 group-hover:blur-none"
@@ -288,7 +288,7 @@ export default async function MarketingPage() {
                 <div className="absolute inset-0 bg-orange-500/5 blur-[80px] rounded-full" />
                 <div className="relative h-full w-full rounded-3xl overflow-hidden shadow-2xl bg-zinc-900/20 backdrop-blur-sm border border-white/5">
                   <Image 
-                    src="/landing-bento-activity.webp" 
+                    src="/landing-bento-activity.avif" 
                     alt="Activity & Structure"
                     fill
                     className="object-cover object-left-top opacity-90 transition-opacity duration-500 hover:opacity-100"
@@ -307,7 +307,7 @@ export default async function MarketingPage() {
                 <div className="relative h-full w-full rounded-3xl overflow-hidden shadow-2xl bg-zinc-900/20 backdrop-blur-sm border border-white/5">
                   <div className="absolute inset-0 flex items-center justify-center p-2 pb-20">
                      <Image 
-                      src="/landing-bento-code.webp" 
+                      src="/landing-bento-code.avif" 
                       alt="Code Native"
                       width={800}
                       height={600}
@@ -328,7 +328,7 @@ export default async function MarketingPage() {
                  <div className="relative h-full w-full rounded-3xl overflow-hidden shadow-2xl bg-zinc-900/20 backdrop-blur-sm border border-white/5">
                   <div className="absolute inset-0 flex items-center justify-center p-2 pb-20">
                      <Image 
-                      src="/landing-bento-sync.webp" 
+                      src="/landing-bento-sync.avif" 
                       alt="Zero Latency Sync"
                       width={800}
                       height={600}
