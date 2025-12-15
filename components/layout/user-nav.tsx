@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog"
 import { useSession, signOut, signIn } from "next-auth/react"
 import { useTheme } from "next-themes"
-import { Monitor, Sun, Moon, LogOut, Shield, RefreshCw, AlertCircle } from "lucide-react"
+import { Monitor, Sun, Moon, LogOut, Shield, RefreshCw, AlertCircle, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useState } from "react"
@@ -45,6 +45,7 @@ export function UserNav() {
   const { theme, setTheme } = useTheme()
   const { currentSpace, networkStatus, rateLimitInfo, spacesSyncState, setSpaceSyncStatus, isUnauthorized } = useStore()
   const [showLogoutAlert, setShowLogoutAlert] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const version = process.env.NEXT_PUBLIC_APP_VERSION;
 
   const isSyncing = currentSpace ? spacesSyncState[currentSpace] === 'syncing' : false
@@ -85,6 +86,7 @@ export function UserNav() {
   }
 
   const handleLogout = async () => {
+    if (isLoggingOut) return
     try {
       const hasUnsynced = await hasUnsyncedChanges()
       if (hasUnsynced) {
@@ -100,6 +102,7 @@ export function UserNav() {
   }
 
   const performLogout = async () => {
+    setIsLoggingOut(true)
     try {
       await db.delete()
     } catch (error) {
@@ -230,14 +233,20 @@ export function UserNav() {
           </DropdownMenuItem>
           <DropdownMenuSeparator className="my-1" />
           <DropdownMenuItem
+            onSelect={(e) => e.preventDefault()}
             onClick={(e) => {
               e.preventDefault()
               handleLogout()
             }}
+            disabled={isLoggingOut}
             className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30 mx-1 my-1"
           >
-            <LogOut className="mr-2 h-4 w-4 text-red-600" />
-            Log out
+            {isLoggingOut ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <LogOut className="mr-2 h-4 w-4 text-red-600" />
+            )}
+            {isLoggingOut ? "Logging out..." : "Log out"}
           </DropdownMenuItem>
           <footer className="mt-2 px-2 py-2 border-t border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center justify-between gap-2">
@@ -267,16 +276,17 @@ export function UserNav() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowLogoutAlert(false)}>
+            <Button variant="outline" onClick={() => setShowLogoutAlert(false)} disabled={isLoggingOut}>
               Cancel
             </Button>
             <Button
               variant="destructive"
+              disabled={isLoggingOut}
               onClick={() => {
-                setShowLogoutAlert(false)
                 performLogout()
               }}
             >
+              {isLoggingOut && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete & Log out
             </Button>
           </DialogFooter>
