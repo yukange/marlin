@@ -69,7 +69,8 @@ export function NoteContent({ content, space, highlight }: NoteContentProps) {
       
       const output = editor.getHTML()
       editor.destroy()
-      return output
+      // Make checkboxes read-only by adding disabled attribute
+      return output.replace(/<input type="checkbox"/g, '<input type="checkbox" disabled')
     } catch (e) {
       console.error("Failed to render note content", e)
       return '<p class="text-red-500">Error rendering note content</p>'
