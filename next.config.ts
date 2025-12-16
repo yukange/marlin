@@ -18,13 +18,14 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
-    // Turbopack configuration for markdown files
-    turbo: {
-      rules: {
-        '*.md': {
-          loaders: ['raw-loader'],
-          as: '*.js',
-        },
+  },
+  
+  // Turbopack configuration for markdown files
+  turbopack: {
+    rules: {
+      '*.md': {
+        loaders: ['raw-loader'],
+        as: '*.js',
       },
     },
   },
