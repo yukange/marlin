@@ -9,8 +9,8 @@ const nextConfig: NextConfig = {
   // Cloudflare Pages compatibility
   output: "standalone",
   
-  // Enable source maps for production debugging
-  productionBrowserSourceMaps: true,
+  // Disable source maps for production to reduce size and build time
+  productionBrowserSourceMaps: false,
 
   // Optimize for edge runtime
   experimental: {
