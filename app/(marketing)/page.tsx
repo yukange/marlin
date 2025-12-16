@@ -132,6 +132,7 @@ export default async function MarketingPage() {
                   width={2040} 
                   height={1890} 
                   priority
+                  fetchPriority="high"
                   className="w-full h-auto"
                 />
                 

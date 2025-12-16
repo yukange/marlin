@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   // Cloudflare Pages compatibility
   output: "standalone",
   
+  // Enable source maps for production debugging
+  productionBrowserSourceMaps: true,
+
   // Optimize for edge runtime
   experimental: {
     // Enable Server Actions on edge
@@ -29,6 +32,7 @@ const nextConfig: NextConfig = {
   // Image optimization for Cloudflare
   images: {
     unoptimized: true,
+    formats: ['image/avif', 'image/webp'],
   },
 
   // Webpack configuration for markdown files
@@ -38,6 +42,40 @@ const nextConfig: NextConfig = {
       type: 'asset/source',
     })
     return config
+  },
+
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
+          },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin'
+          }
+        ],
+      },
+    ]
   },
 };
 
