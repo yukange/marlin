@@ -85,7 +85,7 @@ export default async function MarketingPage() {
             <Image src="/logo-light.svg" alt="Marlin" width={24} height={24} className="h-6 w-6 flex-shrink-0" />
             <Image src="/text-logo-light.svg" alt="Marlin" width={100} height={28} className="h-7" />
           </div>
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-400">
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-300">
             <Link href="#features" className="hover:text-white transition-colors">Features</Link>
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             <Link href="https://github.com/yukange/marlin" target="_blank" className="hover:text-white transition-colors">Open Source</Link>
@@ -106,9 +106,9 @@ export default async function MarketingPage() {
           <div className="space-y-4 max-w-[64rem]">
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-white">
               Your Notes. Your Repo. <br className="hidden sm:inline" />
-              <span className="text-zinc-500">Zero Latency.</span>
+              <span className="text-zinc-400">Zero Latency.</span>
             </h1>
-            <p className="mx-auto max-w-[42rem] leading-normal text-zinc-400 sm:text-xl sm:leading-8">
+            <p className="mx-auto max-w-[42rem] leading-normal text-zinc-300 sm:text-xl sm:leading-8">
               Marlin is a <strong className="text-zinc-300">Local-First</strong> stream-based note-taking app. It uses your <strong className="text-zinc-300">GitHub private repository</strong> as the backend, combined with <strong className="text-zinc-300">Edge</strong> computing and <strong className="text-zinc-300">IndexedDB</strong> for native-app-like speed.
             </p>
           </div>
@@ -116,7 +116,7 @@ export default async function MarketingPage() {
           <div className="flex gap-4">
             <SignInButton variant="primary" size="lg" />
           </div>
-          <div className="flex flex-col items-center gap-2 text-sm text-zinc-500">
+          <div className="flex flex-col items-center gap-2 text-sm text-zinc-400">
              <p>Open Source Friendly · Local First · BYO GitHub Repo</p>
           </div>
 
@@ -180,10 +180,10 @@ export default async function MarketingPage() {
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div className="space-y-6">
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl text-white">No Vendor Lock-in. <br/>Data Sovereignty.</h2>
-              <p className="text-lg text-zinc-400 leading-relaxed">
+              <p className="text-lg text-zinc-300 leading-relaxed">
                 Stop worrying about proprietary formats or export limits. Marlin syncs directly with your GitHub repository, storing every note as a standard Markdown file. You own your data, forever.
               </p>
-              <ul className="space-y-3 text-zinc-400">
+              <ul className="space-y-3 text-zinc-300">
                 <li className="flex items-center gap-3"><Check className="h-5 w-5 text-green-500 shrink-0"/> <span>Standard Markdown (GFM)</span></li>
                 <li className="flex items-center gap-3"><Check className="h-5 w-5 text-green-500 shrink-0"/> <span>Git Version Control</span></li>
                 <li className="flex items-center gap-3"><Check className="h-5 w-5 text-green-500 shrink-0"/> <span>Portable & Parsable</span></li>
@@ -224,10 +224,10 @@ export default async function MarketingPage() {
             </div>
             <div className="order-1 lg:order-2 space-y-6">
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl text-white">Faster than Fast.</h2>
-              <p className="text-lg text-zinc-400 leading-relaxed">
+              <p className="text-lg text-zinc-300 leading-relaxed">
                 Built on a Local-First architecture using IndexedDB. Search, filter, and navigate through thousands of notes with <strong className="text-zinc-300">0ms latency</strong>, even when you are offline. Sync happens quietly in the background.
               </p>
-              <ul className="space-y-3 text-zinc-400">
+              <ul className="space-y-3 text-zinc-300">
                 <li className="flex items-center gap-3"><Check className="h-5 w-5 text-green-500 shrink-0"/> <span>Full Offline Support</span></li>
                 <li className="flex items-center gap-3"><Check className="h-5 w-5 text-green-500 shrink-0"/> <span>Instant Search</span></li>
                 <li className="flex items-center gap-3"><Check className="h-5 w-5 text-green-500 shrink-0"/> <span>Background Sync</span></li>
@@ -239,10 +239,10 @@ export default async function MarketingPage() {
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div className="space-y-6">
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl text-white">Capture at the Speed of Thought.</h2>
-              <p className="text-lg text-zinc-400 leading-relaxed">
+              <p className="text-lg text-zinc-300 leading-relaxed">
                 A stream-based interface designed for dumping thoughts without friction. The Tiptap-powered editor supports slash commands, markdown shortcuts, and code highlighting out of the box.
               </p>
-              <ul className="space-y-3 text-zinc-400">
+              <ul className="space-y-3 text-zinc-300">
                 <li className="flex items-center gap-3"><Check className="h-5 w-5 text-green-500 shrink-0"/> <span>Slash Commands</span></li>
                 <li className="flex items-center gap-3"><Check className="h-5 w-5 text-green-500 shrink-0"/> <span>Markdown Shortcuts</span></li>
                 <li className="flex items-center gap-3"><Check className="h-5 w-5 text-green-500 shrink-0"/> <span>Code Highlighting</span></li>
@@ -316,8 +316,8 @@ export default async function MarketingPage() {
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 p-8 pt-32 bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent">
                     <h3 className="text-xl font-bold text-white mb-1">Code Native</h3>
-                    <p className="text-zinc-400 text-sm">First-class support for code blocks and syntax highlighting.</p>
-                    <p className="text-xs text-zinc-600 mt-2 font-mono">Syntax highlighting support for 100+ languages.</p>
+                    <p className="text-zinc-300 text-sm">First-class support for code blocks and syntax highlighting.</p>
+                    <p className="text-xs text-zinc-500 mt-2 font-mono">Syntax highlighting support for 100+ languages.</p>
                   </div>
                 </div>
               </div>
@@ -340,7 +340,7 @@ export default async function MarketingPage() {
                       <h3 className="text-xl font-bold text-white">Zero Latency Sync</h3>
                       <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                     </div>
-                    <p className="text-zinc-400 text-sm">Optimistic UI ensures you never wait for the network.</p>
+                    <p className="text-zinc-300 text-sm">Optimistic UI ensures you never wait for the network.</p>
                   </div>
                 </div>
               </div>
@@ -409,19 +409,19 @@ export default async function MarketingPage() {
             <div className="grid gap-8">
               <div className="space-y-2">
                 <h3 className="font-bold text-lg text-white">Does it support offline writing?</h3>
-                <p className="text-zinc-400"><strong className="text-zinc-200">Yes.</strong> Marlin is <strong className="text-zinc-200">Local-First</strong> by design. Your notes live in IndexedDB on your device, meaning you can search, write, and edit with <strong className="text-zinc-200">0ms latency</strong> even without an internet connection. Changes sync automatically to GitHub once you are back online.</p>
+                <p className="text-zinc-300"><strong className="text-zinc-200">Yes.</strong> Marlin is <strong className="text-zinc-200">Local-First</strong> by design. Your notes live in IndexedDB on your device, meaning you can search, write, and edit with <strong className="text-zinc-200">0ms latency</strong> even without an internet connection. Changes sync automatically to GitHub once you are back online.</p>
               </div>
               <div className="space-y-2">
                 <h3 className="font-bold text-lg text-white">Where is my data stored?</h3>
-                <p className="text-zinc-400">Your data lives in <strong className="text-zinc-200">your own GitHub private repository</strong>. We do not host, scan, or sell your notes. Marlin acts as a privacy-focused interface for your Git repo. Even if Marlin shuts down tomorrow, your data remains safe in your GitHub account.</p>
+                <p className="text-zinc-300">Your data lives in <strong className="text-zinc-200">your own GitHub private repository</strong>. We do not host, scan, or sell your notes. Marlin acts as a privacy-focused interface for your Git repo. Even if Marlin shuts down tomorrow, your data remains safe in your GitHub account.</p>
               </div>
               <div className="space-y-2">
                 <h3 className="font-bold text-lg text-white">What if I hit GitHub API rate limits?</h3>
-                <p className="text-zinc-400">It&apos;s highly unlikely. Marlin writes to your local database first and batches syncs intelligently. We also use ETag caching to prevent unnecessary requests. You can write thousands of notes without worrying about API quotas.</p>
+                <p className="text-zinc-300">It&apos;s highly unlikely. Marlin writes to your local database first and batches syncs intelligently. We also use ETag caching to prevent unnecessary requests. You can write thousands of notes without worrying about API quotas.</p>
               </div>
               <div className="space-y-2">
                 <h3 className="font-bold text-lg text-white">Can I export my data?</h3>
-                <p className="text-zinc-400">You don&apos;t need to &quot;export.&quot; Since Marlin syncs directly to your repository, your notes are already stored as standard <strong className="text-zinc-200">Markdown files</strong>. You can `git clone` your repo anytime and open them in VS Code, Obsidian, or any text editor.</p>
+                <p className="text-zinc-300">You don&apos;t need to &quot;export.&quot; Since Marlin syncs directly to your repository, your notes are already stored as standard <strong className="text-zinc-200">Markdown files</strong>. You can `git clone` your repo anytime and open them in VS Code, Obsidian, or any text editor.</p>
               </div>
             </div>
           </div>
@@ -430,7 +430,7 @@ export default async function MarketingPage() {
         {/* 8. Pre-Footer */}
         <section className="container max-w-7xl mx-auto py-24 md:py-32 text-center space-y-8">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl text-white">Ready to reclaim your notes?</h2>
-          <p className="text-xl text-zinc-400">Join the developers who choose data sovereignty.</p>
+          <p className="text-xl text-zinc-300">Join the developers who choose data sovereignty.</p>
           <SignInButton size="lg">
             Initialize Your Space
           </SignInButton>
@@ -438,7 +438,7 @@ export default async function MarketingPage() {
       </main>
 
       {/* 9. Footer */}
-      <footer className="border-t border-zinc-800 bg-zinc-900/50 py-12 text-sm text-zinc-500">
+      <footer className="border-t border-zinc-800 bg-zinc-900/50 py-12 text-sm text-zinc-400">
         <div className="container max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p>© 2025 Marlin. Built by Developers, for Developers.</p>
           <div className="flex gap-6">
