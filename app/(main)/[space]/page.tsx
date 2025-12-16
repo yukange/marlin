@@ -2,11 +2,20 @@
 
 import { useSync } from '@/hooks/use-sync'
 import { NoteStream } from '@/components/stream/note-stream'
-import { Composer } from '@/components/editor/composer'
 import { SpaceHeader } from '@/components/layout/space-header'
 import { use, useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSpaces } from '@/hooks/use-spaces'
+import dynamic from 'next/dynamic'
+
+const Composer = dynamic(() => import('@/components/editor/composer').then(mod => mod.Composer), {
+  ssr: false,
+  loading: () => (
+    <div className="h-24 w-full p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-center justify-center">
+      <div className="h-10 w-full max-w-3xl rounded-md bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+    </div>
+  )
+})
 
 export default function SpacePage({ params }: { params: Promise<{ space: string }> }) {
   const { space: spaceName } = use(params) // URL param is the display name

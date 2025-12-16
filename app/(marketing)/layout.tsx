@@ -1,5 +1,5 @@
 import { DarkLayout } from "@/components/layout/dark-layout"
-import { MicrosoftClarity } from "@/components/analytics/microsoft-clarity"
+import { ClarityLoader } from "@/components/analytics/clarity-loader"
 
 export default function MarketingLayout({
   children,
@@ -8,7 +8,7 @@ export default function MarketingLayout({
 }) {
   return (
     <DarkLayout>
-      <MicrosoftClarity />
+      <ClarityLoader />
       {children}
     </DarkLayout>
   )
