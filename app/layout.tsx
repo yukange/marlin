@@ -50,7 +50,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#30CF79" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
         <ThemeProvider

@@ -19,6 +19,7 @@ export interface ParsedNote {
   date: number;
   deleted?: boolean;
   deletedAt?: number;
+  title?: string;
 }
 
 /**
@@ -31,6 +32,7 @@ export interface ParsedNote {
  * date: 1700000000001
  * deleted: true
  * deletedAt: 1700000099999
+ * title: My Note Title
  * ---
  * 
  * Note content here...
@@ -48,6 +50,7 @@ export function parseNote(raw: string): ParsedNote {
     date: typeof data.date === 'number' ? data.date : Date.now(),
     deleted: typeof data.deleted === 'boolean' ? data.deleted : undefined,
     deletedAt: typeof data.deletedAt === 'number' ? data.deletedAt : undefined,
+    title: typeof data.title === 'string' ? data.title : undefined,
   };
 }
 
@@ -61,6 +64,7 @@ export function parseNote(raw: string): ParsedNote {
  * date: 1700000000001
  * deleted: true
  * deletedAt: 1700000099999
+ * title: My Note Title
  * ---
  * 
  * Note content here...
@@ -70,12 +74,16 @@ export function parseNote(raw: string): ParsedNote {
  * @returns Markdown string with frontmatter
  */
 export function stringifyNote(
-  note: Pick<Note, 'content' | 'tags' | 'date' | 'deleted' | 'deletedAt'>
+  note: Pick<Note, 'content' | 'tags' | 'date' | 'deleted' | 'deletedAt' | 'title'>
 ): string {
   const frontmatter: Record<string, any> = {
     tags: note.tags,
     date: note.date,
   };
+
+  if (note.title) {
+    frontmatter.title = note.title;
+  }
 
   // Only include deleted fields if relevant to keep frontmatter clean
   if (note.deleted) {
@@ -89,6 +97,22 @@ export function stringifyNote(
 }
 
 /**
+ * Extract title from markdown content
+ * 
+ * If the first line starts with "# ", extract the text as title.
+ * 
+ * @param content - Markdown content
+ * @returns Title string or undefined
+ */
+export function extractTitle(content: string): string | undefined {
+  const firstLine = content.split('\n')[0];
+  if (firstLine?.startsWith('# ')) {
+    return firstLine.substring(2).trim();
+  }
+  return undefined;
+}
+
+/**
  * Extract hashtags from markdown content
  * 
  * Matches patterns like #tag, #work-note, #2024
@@ -99,12 +123,15 @@ export function stringifyNote(
  */
 export function extractHashtags(content: string): string[] {
   // Match #word patterns (excluding markdown headings)
-  const regex = /(?:^|\s)#([a-zA-Z][a-zA-Z0-9_-]*)\b/g;
+  // Uses Unicode property escapes to support international characters (e.g. Chinese)
+  // Matches: #tag, #Tag, #中文, #t-a-g, #_tag
+  // Does NOT match: ##heading (because the char after # is # or space)
+  const regex = /(?:^|\s)(#([\p{L}\p{N}_\-]+))/gu;
   const matches = content.matchAll(regex);
   
   const tags = new Set<string>();
   for (const match of matches) {
-    tags.add(match[1]);
+    tags.add(match[2]);
   }
   
   return Array.from(tags);

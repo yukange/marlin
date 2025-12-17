@@ -42,14 +42,12 @@ interface UseComposerSubmitOptions {
 interface CreateNoteParams {
   space: string
   content: string
-  tags: string[]
 }
 
 interface UpdateNoteParams {
   id: string
   space: string
   content: string
-  tags: string[]
 }
 
 // ============================================================================
@@ -57,7 +55,7 @@ interface UpdateNoteParams {
 // ============================================================================
 
 export const parseTagsToMentions = (editor: Editor) => {
-  const regex = /(?:^|\s)(#([a-zA-Z0-9_]+))/g
+  const regex = /(?:^|\s)(#([\p{L}\p{N}_\-]+))/gu
   const { tr } = editor.state
   const replacements: { start: number, end: number, id: string }[] = []
 
@@ -432,13 +430,8 @@ export function useComposerSubmit({
 }: UseComposerSubmitOptions) {
   const { createNote, updateNote } = useNoteMutations()
 
-  const extractTags = (content: string): string[] => {
-    return (content.match(/#[a-zA-Z0-9_]+/g) || []).map((tag: string) => tag.slice(1))
-  }
-
   const handleSubmit = async () => {
     const markdownContent = getMarkdownContent()
-    const tags = extractTags(markdownContent)
 
     if (currentNoteId) {
       // Edit existing note
@@ -446,14 +439,12 @@ export function useComposerSubmit({
         id: currentNoteId,
         space,
         content: markdownContent,
-        tags,
       })
     } else {
       // Create new note
       await createNote({
         space,
         content: markdownContent,
-        tags,
       })
     }
 

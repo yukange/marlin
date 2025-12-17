@@ -146,10 +146,19 @@ export function getMarlinExtensions({ placeholder = 'Type a note...', space }: {
   if (space) {
     extensions.push(
       Mention.extend({
-        // @ts-ignore - tiptap-markdown integration
-        toMarkdown: {
-          serialize(state: any, node: any) {
-            state.write('#' + node.attrs.id)
+        addStorage() {
+          return {
+            markdown: {
+              serialize(state: any, node: any) {
+                state.write('#' + node.attrs.id)
+              },
+              parse: {
+                // We assume markdown is just text #tag, which is parsed by main parser 
+                // and then autolinked/mentioned by existing rules or just text.
+                // If we needed to parse specific syntax back to mention node:
+                // setup(markdownit) { ... }
+              }
+            }
           }
         },
         addKeyboardShortcuts() {

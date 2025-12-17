@@ -23,6 +23,7 @@ export interface Note {
   errorMessage?: string; // Error details if syncStatus === 'error'
   deleted?: boolean; // true: deleted (in trash), false/undefined: active
   deletedAt?: number; // Unix timestamp when note was moved to trash
+  title?: string; // Extracted from the first line if it starts with #
 }
 
 export interface Space {
@@ -87,6 +88,12 @@ db.version(5).stores({
     note.deleted = false
     note.deletedAt = undefined
   })
+});
+
+// Version 6: Add 'title' field
+db.version(6).stores({
+  notes: 'id, sha, content, *tags, date, space, syncStatus, deleted, deletedAt, title, [space+date]',
+  spaces: 'name, repoName, updatedAt'
 });
 
 /**

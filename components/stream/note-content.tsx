@@ -3,6 +3,7 @@ import { Editor, Mark, mergeAttributes } from '@tiptap/core'
 import { getMarlinExtensions } from '@/components/editor/extensions'
 import { PROSE_CLASSES } from '@/components/editor/styles'
 import { cn } from '@/lib/utils'
+import { parseTagsToMentions } from '@/hooks/use-composer'
 
 // Create a custom Highlight mark (re-added for static rendering)
 const Highlight = Mark.create({
@@ -43,7 +44,10 @@ export function NoteContent({ content, space, highlight }: NoteContentProps) {
         content: content,
       })
 
-      // 2. Apply Highlighting if query exists
+      // 2. Parse hashtags into mentions (hydrating clean markdown back to UI chips)
+      parseTagsToMentions(editor)
+
+      // 3. Apply Highlighting if query exists
       const query = highlight?.trim()
       if (query && !query.startsWith('#')) {
          const { doc } = editor.state

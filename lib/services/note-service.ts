@@ -14,10 +14,10 @@
 
 import { db, type Note } from '@/lib/client/db';
 import { isErrorWithStatus, isGitHubFile } from '@/lib/utils/type-guards';
+import { extractTitle, extractHashtags } from '@/lib/utils/markdown';
 
 export interface CreateNoteInput {
   content: string;
-  tags: string[];
   space: string; // Space name without .marlin suffix (e.g., "work")
   userLogin: string;
 }
@@ -26,7 +26,6 @@ export interface UpdateNoteInput {
   id: string;
   space: string; // Space name without .marlin suffix (e.g., "work")
   content: string;
-  tags: string[];
   userLogin: string;
 }
 
@@ -42,12 +41,20 @@ export interface UpdateNoteInput {
  * @returns Note ID (timestamp string)
  */
 export async function createNote(input: CreateNoteInput): Promise<string> {
-  const { content, tags, space, userLogin } = input;
+  const { content, space, userLogin } = input;
   
   // Generate ID (timestamp without .md suffix)
   const date = Date.now();
   const id = String(date);
   
+  // Extract title if present
+  const title = extractTitle(content);
+
+  // Extract hashtags from content
+  const tags = extractHashtags(content);
+  console.log('[createNote] Content:', content);
+  console.log('[createNote] Extracted tags:', tags);
+
   // Write to local database (critical path)
   await db.notes.add({
     id,
@@ -57,6 +64,7 @@ export async function createNote(input: CreateNoteInput): Promise<string> {
     space,
     syncStatus: 'pending',
     sha: undefined,
+    title,
   });
   
   // Trigger background sync (fire and forget)
@@ -80,19 +88,28 @@ export async function createNote(input: CreateNoteInput): Promise<string> {
  * @throws {Error} If note not found
  */
 export async function updateNote(input: UpdateNoteInput): Promise<void> {
-  const { id, space, content, tags, userLogin } = input;
+  const { id, space, content, userLogin } = input;
   
   // Get existing note to preserve metadata
   const existingNote = await db.notes.get(id);
   if (!existingNote) {
     throw new Error('Note not found');
   }
+
+  // Extract title if present
+  const title = extractTitle(content);
+
+  // Extract hashtags from content
+  const tags = extractHashtags(content);
+  console.log('[updateNote] Content:', content);
+  console.log('[updateNote] Extracted tags:', tags);
   
   // Update local database (critical path)
   await db.notes.update(id, {
     content,
     tags,
     syncStatus: 'modified',
+    title,
   });
   
   // Trigger background sync (fire and forget)
