@@ -12,7 +12,7 @@
  * - lib/client/db.ts
  */
 
-import { fetchGitHub } from '@/lib/client/github-api';
+import { octokit } from '@/lib/client/github-api';
 import { db, type Space } from '@/lib/client/db';
 
 export interface GitHubRepo {
@@ -96,7 +96,8 @@ export function validateSpaceName(name: string): {
   }
   
   // Check for reserved keywords
-  if (RESERVED_KEYWORDS.includes(trimmedName as any)) {
+  // Use a type predicate or simple inclusion check
+  if (RESERVED_KEYWORDS.includes(trimmedName as typeof RESERVED_KEYWORDS[number])) {
     return {
       valid: false,
       error: `"${name}" is a reserved keyword and cannot be used as a space name`,
@@ -126,8 +127,11 @@ export function validateSpaceName(name: string): {
 export async function getUserRepos(): Promise<GitHubRepo[]> {
   // Fetch all repos and filter client-side for simplicity in MVP
   // In production, might want to use search API or pagination
-  const repos: GitHubRepo[] = await fetchGitHub('user/repos?sort=updated&per_page=100');
-  return repos.filter(repo => repo.name.endsWith('.marlin'));
+  const { data: repos } = await octokit.rest.repos.listForAuthenticatedUser({
+    sort: 'updated',
+    per_page: 100,
+  });
+  return (repos as GitHubRepo[]).filter(repo => repo.name.endsWith('.marlin'));
 }
 
 /**
@@ -185,18 +189,15 @@ export async function createSpace(
   const repoName = spaceToRepo(name);
   
   // Create repo on GitHub
-  const repo: GitHubRepo = await fetchGitHub('user/repos', {
-    method: 'POST',
-    body: JSON.stringify({
-      name: repoName,
-      description: description || 'Managed by Marlin',
-      private: isPrivate,
-      auto_init: true,
-    }),
+  const { data: repo } = await octokit.rest.repos.createForAuthenticatedUser({
+    name: repoName,
+    description: description || 'Managed by Marlin',
+    private: isPrivate,
+    auto_init: true,
   });
   
   // Convert and save to local DB
-  const space = githubRepoToSpace(repo);
+  const space = githubRepoToSpace(repo as GitHubRepo);
   await db.spaces.put(space);
   
   return space;
@@ -218,8 +219,9 @@ export async function deleteSpace(name: string, owner: string): Promise<void> {
   const repoName = spaceToRepo(name);
   
   // Delete repo on GitHub
-  await fetchGitHub(`repos/${owner}/${repoName}`, {
-    method: 'DELETE',
+  await octokit.rest.repos.delete({
+    owner,
+    repo: repoName,
   });
   
   // Clean up local database

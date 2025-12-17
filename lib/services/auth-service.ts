@@ -10,7 +10,7 @@
  * - lib/client/github-api.ts
  */
 
-import { fetchGitHub } from '@/lib/client/github-api';
+import { octokit } from '@/lib/client/github-api';
 
 export interface GitHubUser {
   login: string;
@@ -39,7 +39,8 @@ export interface RateLimit {
  * @throws {GitHubApiError} If not authenticated or API fails
  */
 export async function getUserProfile(): Promise<GitHubUser> {
-  return fetchGitHub<GitHubUser>('user');
+  const { data } = await octokit.rest.users.getAuthenticated();
+  return data as GitHubUser;
 }
 
 /**
@@ -48,13 +49,8 @@ export async function getUserProfile(): Promise<GitHubUser> {
  * @returns Rate limit information for current user
  */
 export async function getRateLimit(): Promise<RateLimit> {
-  const response = await fetchGitHub<{
-    resources: {
-      core: RateLimit;
-    };
-  }>('rate_limit');
-  
-  return response.resources.core;
+  const { data } = await octokit.rest.rateLimit.get();
+  return data.resources.core;
 }
 
 /**

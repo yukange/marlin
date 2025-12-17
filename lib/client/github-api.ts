@@ -2,132 +2,64 @@
  * GitHub API Client (Infrastructure Layer)
  * 
  * Responsibilities:
- * - Raw HTTP communication with GitHub via /api/proxy
+ * - Raw HTTP communication with GitHub via Octokit (proxied via /api/proxy)
  * - Error handling and response parsing
  * - NO business logic
  * 
- * This is the ONLY place where fetch() calls to GitHub should happen.
+ * This is the ONLY place where GitHub API calls should happen.
  */
 
 import { useStore } from "@/lib/store";
+import { Octokit } from "octokit";
 
 export interface GitHubApiError extends Error {
   status?: number;
   statusText?: string;
 }
 
-/**
- * Fetch data from GitHub API through the proxy endpoint
- * 
- * @param path - GitHub API path (e.g., "user/repos", "repos/owner/repo/contents/file")
- * @param options - Standard fetch options (method, headers, body)
- * @returns Parsed JSON response
- * @throws {GitHubApiError} If the request fails
- * 
- * @example
- * const repos = await fetchGitHub('user/repos?sort=updated&per_page=100')
- * 
- * @example
- * await fetchGitHub('repos/owner/repo/contents/notes/123.md', {
- *   method: 'PUT',
- *   body: JSON.stringify({ message: 'Update', content: base64, sha })
- * })
- */
-export async function fetchGitHub<T = any>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
-  // Remove leading slash if present
-  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-  
-  const res = await fetch(`/api/proxy/${cleanPath}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-  
-  if (!res.ok) {
-    if (res.status === 401) {
-      useStore.getState().setIsUnauthorized(true);
-    }
+// Initialize Octokit pointing to our local proxy
+export const octokit = new Octokit({
+  baseUrl: "/api/proxy",
+});
 
-    const error = new Error(
-      `GitHub API error: ${res.status} ${res.statusText}`
-    ) as GitHubApiError;
-    error.status = res.status;
-    error.statusText = res.statusText;
-    throw error;
+// Hook to handle unauthorized errors globally
+octokit.hook.after("request", async (response, _options) => {
+  if (response.status === 401) {
+    useStore.getState().setIsUnauthorized(true);
   }
-  
-  return res.json();
+});
+
+octokit.hook.error("request", async (error, _options) => {
+  if ('status' in error && error.status === 401) {
+    useStore.getState().setIsUnauthorized(true);
+  }
+  throw error;
+});
+
+// GraphQL Interfaces
+interface TreeEntry {
+  name: string;
+  type: string;
+  oid: string;
 }
 
-
-/**
- * Create or update a file in GitHub
- * 
- * @param owner - Repository owner
- * @param repo - Repository name (with .marlin suffix)
- * @param path - File path (e.g., "notes/123.md")
- * @param content - Base64-encoded content
- * @param message - Commit message
- * @param sha - Existing file SHA (for updates, undefined for creates)
- * @returns Response with new SHA
- */
-export async function putFile(
-  owner: string,
-  repo: string,
-  path: string,
-  content: string,
-  message: string,
-  sha?: string
-): Promise<{ content: { sha: string } }> {
-  return fetchGitHub(`repos/${owner}/${repo}/contents/${path}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      message,
-      content,
-      sha,
-    }),
-  });
+interface TreeObject {
+  entries: TreeEntry[];
 }
 
-/**
- * Execute a GraphQL query against the GitHub API
- */
-export async function fetchGraphQL<T = any>(
-  query: string,
-  variables: Record<string, any> = {}
-): Promise<T> {
-  const res = await fetch('/api/proxy/graphql', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ query, variables }),
-  });
+interface BlobObject {
+  text: string;
+}
 
-  if (!res.ok) {
-    if (res.status === 401) {
-      useStore.getState().setIsUnauthorized(true);
-    }
-    
-    const error = new Error(
-      `GitHub GraphQL error: ${res.status} ${res.statusText}`
-    ) as GitHubApiError;
-    error.status = res.status;
-    error.statusText = res.statusText;
-    throw error;
-  }
-
-  const json = await res.json();
-  if (json.errors) {
-    throw new Error(`GraphQL Error: ${json.errors[0]?.message || JSON.stringify(json.errors)}`);
-  }
-  
-  return json.data;
+interface RepositoryQuery {
+  repository: {
+    object?: {
+      oid: string;
+    };
+    notesTree?: TreeObject;
+    trashTree?: TreeObject;
+    [key: string]: BlobObject | TreeObject | { oid: string } | undefined;
+  };
 }
 
 /**
@@ -150,7 +82,7 @@ export async function fetchRemoteTreeSha(
   `;
 
   try {
-    const data = await fetchGraphQL(query, { owner, repo });
+    const data = await octokit.graphql<RepositoryQuery>(query, { owner, repo });
     return data.repository?.object?.oid || null;
   } catch (error) {
     console.error('Failed to fetch remote tree SHA:', error);
@@ -190,12 +122,12 @@ export async function fetchNotesTree(
     }
   `;
 
-  const data = await fetchGraphQL(query, { owner, repo });
+  const data = await octokit.graphql<RepositoryQuery>(query, { owner, repo });
   const results: Array<{ path: string; sha: string; type: 'blob' }> = [];
 
   // Process notes/ directory
   const notesEntries = data.repository?.notesTree?.entries || [];
-  notesEntries.forEach((e: any) => {
+  notesEntries.forEach((e) => {
     if (e.type === 'blob' && e.name.endsWith('.md')) {
       results.push({
         path: `notes/${e.name}`,
@@ -207,7 +139,7 @@ export async function fetchNotesTree(
 
   // Process .trash/ directory
   const trashEntries = data.repository?.trashTree?.entries || [];
-  trashEntries.forEach((e: any) => {
+  trashEntries.forEach((e) => {
     if (e.type === 'blob' && e.name.endsWith('.md')) {
       results.push({
         path: `.trash/${e.name}`,
@@ -248,14 +180,14 @@ export async function fetchBlobs(
     }
   `;
 
-  const data = await fetchGraphQL(query, { owner, repo });
+  const data = await octokit.graphql<RepositoryQuery>(query, { owner, repo });
   const result: Record<string, string> = {};
 
   if (data.repository) {
     for (const [alias, content] of Object.entries(data.repository)) {
       const sha = aliasMap.get(alias);
-      if (sha && (content as any)?.text) {
-        result[sha] = (content as any).text;
+      if (sha && content && 'text' in content) {
+        result[sha] = (content as BlobObject).text;
       }
     }
   }

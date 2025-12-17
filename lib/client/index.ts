@@ -8,5 +8,5 @@
 export { db, hasUnsyncedChanges } from './db';
 export type { Note, Space } from './db';
 
-export { fetchGitHub, putFile, fetchGraphQL, fetchNotesTree, fetchBlobs } from './github-api';
+export { octokit, fetchNotesTree, fetchBlobs } from './github-api';
 export type { GitHubApiError } from './github-api';

@@ -13,6 +13,7 @@
  */
 
 import { db, type Note } from '@/lib/client/db';
+import { isErrorWithStatus, isGitHubFile } from '@/lib/utils/type-guards';
 
 export interface CreateNoteInput {
   content: string;
@@ -61,7 +62,7 @@ export async function createNote(input: CreateNoteInput): Promise<string> {
   // Trigger background sync (fire and forget)
   // Import dynamically to avoid circular dependency
   const { pushSingleNote } = await import('@/lib/services/sync-service');
-  pushSingleNote(id, space, userLogin).catch((error: any) => {
+  pushSingleNote(id, space, userLogin).catch((error: unknown) => {
     console.error(`Background sync failed for note ${id}:`, error);
     // Error is handled in pushSingleNote (sets syncStatus to 'error')
   });
@@ -96,7 +97,7 @@ export async function updateNote(input: UpdateNoteInput): Promise<void> {
   
   // Trigger background sync (fire and forget)
   const { pushSingleNote } = await import('@/lib/services/sync-service');
-  pushSingleNote(id, space, userLogin).catch((error: any) => {
+  pushSingleNote(id, space, userLogin).catch((error: unknown) => {
     console.error(`Background sync failed for note ${id}:`, error);
     // Error is handled in pushSingleNote (sets syncStatus to 'error')
   });
@@ -135,7 +136,7 @@ export async function deleteNote(
   // 2. Trigger background sync
   const { pushSingleNote } = await import('@/lib/services/sync-service');
   
-  pushSingleNote(id, space, userLogin).catch((error: any) => {
+  pushSingleNote(id, space, userLogin).catch((error: unknown) => {
     console.error(`Background delete failed for note ${id}:`, error);
   });
 }
@@ -167,7 +168,7 @@ export async function restoreNote(
   // 2. Trigger background sync
   const { pushSingleNote } = await import('@/lib/services/sync-service');
   
-  pushSingleNote(id, space, userLogin).catch((error: any) => {
+  pushSingleNote(id, space, userLogin).catch((error: unknown) => {
     console.error(`Background restore failed for note ${id}:`, error);
   });
 }
@@ -192,11 +193,10 @@ export async function permanentDeleteNote(
   }
 
   // Import services dynamically
-  const { fetchGitHub } = await import('@/lib/client/github-api');
+  const { octokit } = await import('@/lib/client/github-api');
   const { spaceToRepo } = await import('@/lib/services/space-service');
 
   const repoName = spaceToRepo(space);
-  const repoPath = `repos/${userLogin}/${repoName}`;
 
   // Try to delete from GitHub .trash/ (Best effort)
   try {
@@ -207,22 +207,28 @@ export async function permanentDeleteNote(
     // If local SHA is missing or we suspect it's stale, try fetch from .trash
     if (!sha || sha === 'pending') {
        try {
-         const res = await fetchGitHub(`${repoPath}/contents/.trash/${id}.md`);
-         sha = res.sha;
-       } catch (e: any) {
-         if (e.status !== 404) throw e;
+         const { data } = await octokit.rest.repos.getContent({
+            owner: userLogin,
+            repo: repoName,
+            path: `.trash/${id}.md`
+         });
+         
+         if (isGitHubFile(data)) {
+           sha = data.sha;
+         }
+       } catch (e: unknown) {
+         if (isErrorWithStatus(e) && e.status !== 404) throw e;
          // If 404, file is already gone from remote, which is fine
        }
     }
 
     if (sha) {
-      await fetchGitHub(`${repoPath}/contents/.trash/${id}.md`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: `Permanent delete note ${id}`,
-          sha,
-        }),
+      await octokit.rest.repos.deleteFile({
+        owner: userLogin,
+        repo: repoName,
+        path: `.trash/${id}.md`,
+        message: `Permanent delete note ${id}`,
+        sha,
       });
     }
   } catch (error) {
