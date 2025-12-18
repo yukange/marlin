@@ -6,7 +6,7 @@ import { useNotes } from '@/hooks/use-notes'
 import { useNoteMutations } from '@/hooks/use-composer'
 import { useConfirmDialogStore } from '@/hooks/use-confirm-dialog'
 import { formatRelativeTime, formatPreciseTime } from '@/lib/utils/date'
-import { MoreHorizontal, Trash2, ExternalLink, ChevronDown, ChevronUp, Edit, RefreshCw, ArchiveRestore } from 'lucide-react'
+import { MoreHorizontal, Trash2, ExternalLink, ChevronDown, ChevronUp, Edit, RefreshCw, ArchiveRestore, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -20,6 +20,7 @@ import { useGitHubUser } from '@/hooks/use-github-user'
 import { cn } from '@/lib/utils'
 import { spaceToRepo } from '@/lib/services'
 import { NoteContent } from './note-content'
+import { toast } from 'sonner'
 
 const MAX_LINES = 12
 
@@ -70,6 +71,32 @@ function NoteCard({
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
+  const handleShare = async () => {
+    const toastId = toast.loading('Publishing to Gist...')
+    try {
+      const response = await fetch('/api/proxy/gist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: note.content,
+          title: note.title || `note-${note.id}.md`
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to publish')
+
+      const { id } = await response.json()
+      const shareUrl = `${window.location.origin}/share/${id}`
+
+      await navigator.clipboard.writeText(shareUrl)
+      toast.success('Published! Link copied to clipboard.', { id: toastId })
+      window.open(shareUrl, '_blank')
+    } catch (error) {
+      console.error('Share failed:', error)
+      toast.error('Failed to publish note', { id: toastId })
+    }
+  }
+
   const syncStatus = note.syncStatus || 'synced'
   const syncConfig = {
     synced: {
@@ -89,7 +116,7 @@ function NoteCard({
     },
     syncing: {
       color: 'bg-blue-500 dark:bg-blue-600',
-      tooltip: 'Syncing to GitHub...', 
+      tooltip: 'Syncing to GitHub...',
       animate: true
     },
     error: {
@@ -100,11 +127,11 @@ function NoteCard({
   }[syncStatus]
 
   return (
-    <article 
+    <article
       className={cn(
         "rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow relative border",
-        isInTrash 
-          ? "bg-zinc-50 dark:bg-zinc-900/30 border-zinc-200 dark:border-zinc-800/50 opacity-80 hover:opacity-100 grayscale-[0.3]" 
+        isInTrash
+          ? "bg-zinc-50 dark:bg-zinc-900/30 border-zinc-200 dark:border-zinc-800/50 opacity-80 hover:opacity-100 grayscale-[0.3]"
           : "dark:bg-zinc-900 dark:shadow-zinc-800/50 dark:hover:shadow-zinc-800 dark:border-zinc-800"
       )}
     >
@@ -118,8 +145,8 @@ function NoteCard({
                   {isInTrash && <span className="ml-1 text-zinc-400">(Deleted)</span>}
                 </time>
               </TooltipTrigger>
-              <TooltipContent 
-                side="bottom" 
+              <TooltipContent
+                side="bottom"
                 className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 shadow-md"
               >
                 <p>Created: {formatPreciseTime(note.date)}</p>
@@ -140,7 +167,7 @@ function NoteCard({
                 disabled={isInTrash}
                 className={cn(
                   "inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors",
-                  isInTrash 
+                  isInTrash
                     ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-default"
                     : "cursor-pointer",
                   !isInTrash && (isHighlighted
@@ -156,7 +183,7 @@ function NoteCard({
         <div className="flex items-center gap-2">
           {/* Sync Status Indicator */}
           <div className="relative group">
-            <div 
+            <div
               className={cn(
                 "w-2 h-2 rounded-full",
                 syncConfig.color,
@@ -169,7 +196,7 @@ function NoteCard({
               {syncConfig.tooltip}
             </div>
           </div>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -180,7 +207,7 @@ function NoteCard({
                 <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="start" className="w-48">
               {/* Error Retry */}
               {syncStatus === 'error' && (
                 <>
@@ -215,6 +242,13 @@ function NoteCard({
                     <Edit className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleShare}>
+                    <Globe className="mr-2 h-4 w-4" />
+                    Share to Web
+                    <span className="ml-2 rounded-[4px] bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 tracking-wider leading-none">
+                      PRO
+                    </span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleOpenInGitHub}>
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open in GitHub
@@ -242,10 +276,10 @@ function NoteCard({
             isInTrash && "opacity-80" // Slightly dim content in trash
           )}
           style={{
-            maxHeight: !shouldShowExpandButton 
-              ? undefined 
-              : isExpanded 
-                ? `${fullHeight}px` 
+            maxHeight: !shouldShowExpandButton
+              ? undefined
+              : isExpanded
+                ? `${fullHeight}px`
                 : `${MAX_LINES * 1.5}rem`
           }}
         >
@@ -302,7 +336,7 @@ export function NoteStream({ space, searchQuery = '', filterDate = '', onEditNot
   const openDialog = useConfirmDialogStore((state) => state.openDialog)
 
   const handleEdit = (note: Note) => {
-      onEditNote?.(note.content, note.id)
+    onEditNote?.(note.content, note.id)
   }
 
   const handleRetrySync = async (note: Note) => {
@@ -360,7 +394,7 @@ export function NoteStream({ space, searchQuery = '', filterDate = '', onEditNot
           onDelete={handleDelete}
           onEdit={handleEdit}
           onRetrySync={handleRetrySync}
-          onTagClick={onTagClick || (() => {})}
+          onTagClick={onTagClick || (() => { })}
           onRestore={handleRestore}
           onPermanentDelete={handlePermanentDelete}
           space={space}

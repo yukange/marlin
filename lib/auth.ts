@@ -8,7 +8,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     GitHub({
       authorization: {
         params: {
-          scope: "repo",
+          scope: "repo gist",
         },
       },
     }),

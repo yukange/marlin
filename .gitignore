@@ -49,3 +49,5 @@ docs
 
 .github
 GEMINI.md
+.gemini/
+gha-creds-*.json

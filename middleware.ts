@@ -8,7 +8,7 @@ export default auth((req) => {
 
   const isLoggedIn = !!req.auth
   const isAuthPage = pathname.startsWith("/api/auth")
-  const isPublicPage = ["/", "/privacy", "/terms", "/pricing"].includes(pathname)
+  const isPublicPage = ["/", "/privacy", "/terms", "/pricing"].includes(pathname) || pathname.startsWith("/share/")
 
   if (!isLoggedIn && !isPublicPage && !isAuthPage) {
     return NextResponse.redirect(new URL("/", req.url))
