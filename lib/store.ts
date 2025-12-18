@@ -17,6 +17,7 @@ interface MarlinState {
   networkStatus: NetworkStatus
   rateLimitInfo: RateLimitInfo | null
   isUnauthorized: boolean
+  isPro: boolean
   setCurrentSpace: (space: string) => void
   setLastActiveSpace: (space: string) => void
   setSyncStatus: (status: 'synced' | 'syncing' | 'error') => void
@@ -24,6 +25,7 @@ interface MarlinState {
   setNetworkStatus: (status: NetworkStatus) => void
   setRateLimitInfo: (info: RateLimitInfo | null) => void
   setIsUnauthorized: (isUnauthorized: boolean) => void
+  setIsPro: (isPro: boolean) => void
 }
 
 export const useStore = create<MarlinState>()(
@@ -36,6 +38,7 @@ export const useStore = create<MarlinState>()(
       networkStatus: 'online',
       rateLimitInfo: null,
       isUnauthorized: false,
+      isPro: true, // Default to true for public beta
       setCurrentSpace: (space) => {
         set({ currentSpace: space, lastActiveSpace: space })
       },
@@ -48,6 +51,7 @@ export const useStore = create<MarlinState>()(
       setNetworkStatus: (status) => set({ networkStatus: status }),
       setRateLimitInfo: (info) => set({ rateLimitInfo: info }),
       setIsUnauthorized: (isUnauthorized) => set({ isUnauthorized }),
+      setIsPro: (isPro) => set({ isPro }),
     }),
     {
       name: 'marlin-storage',

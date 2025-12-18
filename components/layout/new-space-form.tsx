@@ -73,7 +73,12 @@ export function NewSpaceForm({ onCancel, onSuccess }: NewSpaceFormProps) {
             height={28}
             className="rounded-lg"
           />
-          <h2 className="text-lg font-semibold dark:text-zinc-100">New Space</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold dark:text-zinc-100">New Space</h2>
+            <span className="rounded-[4px] bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 tracking-wider">
+              PRO
+            </span>
+          </div>
         </div>
         <Button
           variant="ghost"

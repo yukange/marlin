@@ -98,9 +98,15 @@ export function SpaceSwitcher() {
                   setOpen(false)
                   setShowNewSpace(true)
                 }}
+                className="flex items-center justify-between"
               >
-                <Plus className="mr-2 h-4 w-4" />
-                New Space
+                <div className="flex items-center">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Space
+                </div>
+                <span className="ml-2 rounded-[4px] bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 tracking-wider">
+                  PRO
+                </span>
               </CommandItem>
             </CommandGroup>
           </CommandList>
