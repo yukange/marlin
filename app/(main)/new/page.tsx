@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useState, useMemo } from "react"
 import { createSpace, validateSpaceName } from "@/lib/services/space-service"
 import { useRouter } from "next/navigation"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { Loader2, Lock, Globe, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -16,10 +16,9 @@ export default function NewSpacePage() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [isPrivate, setIsPrivate] = useState(true)
-  
+
   const router = useRouter()
-  const queryClient = useQueryClient()
-  
+
   const validation = useMemo(() => validateSpaceName(name), [name])
 
   const createSpaceMutation = useMutation({
@@ -27,8 +26,8 @@ export default function NewSpacePage() {
       await createSpace(name, description, isPrivate)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['spaces'] })
-      // Use space name (without .marlin suffix) for routing
+      // Note: No invalidateQueries needed - createSpace writes to Dexie DB
+      // and useLiveQuery in useSpaces automatically picks up the change
       const spaceName = name.replace(/\.marlin$/, '')
       toast.success("Space created successfully")
       router.push(`/${spaceName}`)
@@ -158,9 +157,9 @@ export default function NewSpacePage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button 
+            <Button
               type="submit"
-              className="w-full rounded-full bg-[#30CF79] hover:bg-[#2BC06E] text-white mt-4" 
+              className="w-full rounded-full bg-[#30CF79] hover:bg-[#2BC06E] text-white mt-4"
               disabled={!name.trim() || !validation.valid || createSpaceMutation.isPending}
             >
               {createSpaceMutation.isPending ? (

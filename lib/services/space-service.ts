@@ -40,6 +40,51 @@ const RESERVED_KEYWORDS = [
   '_next',
 ] as const;
 
+// GitHub Actions workflow content for cleaning up orphan images
+const CLEANUP_WORKFLOW_CONTENT = `name: Cleanup Orphan Images
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Find and delete orphan images
+        run: |
+          # Extract all referenced images from notes frontmatter
+          REFERENCED_IMAGES=$(grep -rh "^images:" notes/ 2>/dev/null | \\
+            sed 's/images: \\[//' | sed 's/\\]//' | \\
+            tr ',' '\\n' | tr -d ' "' | sort -u || echo "")
+          
+          # List all images in images/ directory
+          if [ -d "images" ]; then
+            for img in images/*; do
+              filename=$(basename "$img")
+              if ! echo "$REFERENCED_IMAGES" | grep -qx "$filename"; then
+                echo "Deleting orphan image: $filename"
+                rm "$img"
+              fi
+            done
+          fi
+      
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "chore: cleanup orphan images"
+          git push || true
+`;
+
+
 /**
  * Convert space name to repo name by adding .marlin suffix
  * @internal Only for GitHub API calls
@@ -90,11 +135,11 @@ export function validateSpaceName(name: string): {
   error?: string;
 } {
   const trimmedName = name.trim().toLowerCase();
-  
+
   if (!trimmedName) {
     return { valid: false, error: 'Space name is required' };
   }
-  
+
   // Check for reserved keywords
   // Use a type predicate or simple inclusion check
   if (RESERVED_KEYWORDS.includes(trimmedName as typeof RESERVED_KEYWORDS[number])) {
@@ -103,7 +148,7 @@ export function validateSpaceName(name: string): {
       error: `"${name}" is a reserved keyword and cannot be used as a space name`,
     };
   }
-  
+
   // GitHub repo name validation
   if (!/^[a-zA-Z0-9._-]+$/.test(trimmedName)) {
     return {
@@ -111,11 +156,11 @@ export function validateSpaceName(name: string): {
       error: 'Space name can only contain letters, numbers, dots, hyphens, and underscores',
     };
   }
-  
+
   if (trimmedName.length > 93) {
     return { valid: false, error: 'Space name must be 93 characters or less' };
   }
-  
+
   return { valid: true };
 }
 
@@ -145,10 +190,10 @@ export async function getUserRepos(): Promise<GitHubRepo[]> {
 export async function getUserSpaces(): Promise<Space[]> {
   const repos = await getUserRepos();
   const spaces = repos.map(githubRepoToSpace);
-  
+
   // Sync to Dexie for persistence and offline access
   await Promise.all(spaces.map(space => db.spaces.put(space)));
-  
+
   return spaces;
 }
 
@@ -185,9 +230,9 @@ export async function createSpace(
   if (!validation.valid) {
     throw new Error(validation.error);
   }
-  
+
   const repoName = spaceToRepo(name);
-  
+
   // Create repo on GitHub
   const { data: repo } = await octokit.rest.repos.createForAuthenticatedUser({
     name: repoName,
@@ -195,11 +240,25 @@ export async function createSpace(
     private: isPrivate,
     auto_init: true,
   });
-  
+
+  // Initialize cleanup workflow for orphan images
+  try {
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner: repo.owner.login,
+      repo: repoName,
+      path: '.github/workflows/cleanup-images.yml',
+      message: 'Add image cleanup workflow',
+      content: Buffer.from(CLEANUP_WORKFLOW_CONTENT).toString('base64'),
+    });
+  } catch (error) {
+    console.error('Failed to create cleanup workflow:', error);
+    // Non-blocking: workflow creation failure shouldn't fail space creation
+  }
+
   // Convert and save to local DB
   const space = githubRepoToSpace(repo as GitHubRepo);
   await db.spaces.put(space);
-  
+
   return space;
 }
 
@@ -217,18 +276,18 @@ export async function createSpace(
  */
 export async function deleteSpace(name: string, owner: string): Promise<void> {
   const repoName = spaceToRepo(name);
-  
+
   // Delete repo on GitHub
   await octokit.rest.repos.delete({
     owner,
     repo: repoName,
   });
-  
+
   // Clean up local database
   await db.transaction('rw', db.notes, db.spaces, async () => {
     // Delete all notes in this space
     await db.notes.where('space').equals(name).delete();
-    
+
     // Delete space record
     await db.spaces.delete(name);
   });

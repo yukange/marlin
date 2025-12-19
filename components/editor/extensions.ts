@@ -7,6 +7,7 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Mention from '@tiptap/extension-mention'
 import Link from '@tiptap/extension-link'
+import Image from '@tiptap/extension-image'
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import { all, createLowlight } from 'lowlight'
 import { Markdown } from 'tiptap-markdown'
@@ -55,11 +56,11 @@ export function getMarlinExtensions({ placeholder = 'Type a note...', space }: {
         let highlightedNodes: any[] = []
         try {
           if (language === 'plaintext' || language === 'auto' || !lowlight.listLanguages().includes(language)) {
-             // Fallback for plaintext/auto/unknown: just text
-             highlightedNodes = [{ type: 'text', value: content }]
+            // Fallback for plaintext/auto/unknown: just text
+            highlightedNodes = [{ type: 'text', value: content }]
           } else {
-             const tree = lowlight.highlight(language, content)
-             highlightedNodes = tree.children
+            const tree = lowlight.highlight(language, content)
+            highlightedNodes = tree.children
           }
         } catch (e) {
           console.error('Highlighting failed', e)
@@ -140,6 +141,13 @@ export function getMarlinExtensions({ placeholder = 'Type a note...', space }: {
     }),
     Placeholder.configure({
       placeholder,
+    }),
+    Image.configure({
+      inline: false,
+      allowBase64: true, // Allow base64 for local-first: images stored locally until note is sent
+      HTMLAttributes: {
+        class: 'rounded-lg max-w-full h-auto my-4',
+      },
     }),
   ]
 

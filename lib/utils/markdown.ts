@@ -20,6 +20,7 @@ export interface ParsedNote {
   deleted?: boolean;
   deletedAt?: number;
   title?: string;
+  images?: string[]; // Image filenames stored in repo
 }
 
 /**
@@ -43,7 +44,7 @@ export interface ParsedNote {
  */
 export function parseNote(raw: string): ParsedNote {
   const { data, content } = matter(raw);
-  
+
   return {
     content: content.trim(),
     tags: Array.isArray(data.tags) ? data.tags : [],
@@ -51,6 +52,7 @@ export function parseNote(raw: string): ParsedNote {
     deleted: typeof data.deleted === 'boolean' ? data.deleted : undefined,
     deletedAt: typeof data.deletedAt === 'number' ? data.deletedAt : undefined,
     title: typeof data.title === 'string' ? data.title : undefined,
+    images: Array.isArray(data.images) ? data.images : undefined,
   };
 }
 
@@ -74,7 +76,7 @@ export function parseNote(raw: string): ParsedNote {
  * @returns Markdown string with frontmatter
  */
 export function stringifyNote(
-  note: Pick<Note, 'content' | 'tags' | 'date' | 'deleted' | 'deletedAt' | 'title'>
+  note: Pick<Note, 'content' | 'tags' | 'date' | 'deleted' | 'deletedAt' | 'title'> & { images?: string[] }
 ): string {
   const frontmatter: Record<string, any> = {
     tags: note.tags,
@@ -85,6 +87,11 @@ export function stringifyNote(
     frontmatter.title = note.title;
   }
 
+  // Track images used in this note
+  if (note.images && note.images.length > 0) {
+    frontmatter.images = note.images;
+  }
+
   // Only include deleted fields if relevant to keep frontmatter clean
   if (note.deleted) {
     frontmatter.deleted = true;
@@ -92,7 +99,7 @@ export function stringifyNote(
       frontmatter.deletedAt = note.deletedAt;
     }
   }
-  
+
   return matter.stringify(note.content, frontmatter);
 }
 
@@ -128,12 +135,12 @@ export function extractHashtags(content: string): string[] {
   // Does NOT match: ##heading (because the char after # is # or space)
   const regex = /(?:^|\s)(#([\p{L}\p{N}_\-]+))/gu;
   const matches = content.matchAll(regex);
-  
+
   const tags = new Set<string>();
   for (const match of matches) {
     tags.add(match[2]);
   }
-  
+
   return Array.from(tags);
 }
 
@@ -150,4 +157,27 @@ export function mergeTags(frontmatterTags: string[], content: string): string[] 
   const hashtagsFromContent = extractHashtags(content);
   const allTags = new Set([...frontmatterTags, ...hashtagsFromContent]);
   return Array.from(allTags).sort();
+}
+
+/**
+ * Extract image filenames from markdown content
+ * 
+ * Matches proxy URLs like: /api/proxy/image/user/repo.marlin/images/filename.png
+ * Extracts just the filename (e.g., "filename.png")
+ * 
+ * @param content - Markdown content
+ * @returns Array of unique image filenames
+ */
+export function extractImageFilenames(content: string): string[] {
+  // Match proxy image URLs and extract filename
+  // Pattern: /api/proxy/image/.../images/FILENAME
+  const regex = /\/api\/proxy\/image\/[^/]+\/[^/]+\/images\/([^)\s"']+)/g;
+  const matches = content.matchAll(regex);
+
+  const filenames = new Set<string>();
+  for (const match of matches) {
+    filenames.add(match[1]);
+  }
+
+  return Array.from(filenames);
 }

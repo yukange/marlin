@@ -26,11 +26,11 @@ import { useSpaces } from "@/hooks/use-spaces"
 export function SpaceSwitcher() {
   const [open, setOpen] = React.useState(false)
   const { setShowNewSpace } = useSidebar()
-  
+
   const router = useRouter()
   const params = useParams()
-  const { setCurrentSpace } = useStore()
-  
+  const { setCurrentSpace, isPro } = useStore()
+
   const currentSpaceName = params.space as string
   const { spaces } = useSpaces()
 
@@ -104,9 +104,11 @@ export function SpaceSwitcher() {
                   <Plus className="mr-2 h-4 w-4" />
                   New Space
                 </div>
-                <span className="ml-2 rounded-[4px] bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 tracking-wider">
-                  PRO
-                </span>
+                {!isPro && (
+                  <span className="ml-2 rounded-[4px] bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 tracking-wider">
+                    PRO
+                  </span>
+                )}
               </CommandItem>
             </CommandGroup>
           </CommandList>

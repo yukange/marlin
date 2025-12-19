@@ -6,10 +6,11 @@ import { X, Lock, Globe, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createSpace, validateSpaceName } from "@/lib/services/space-service"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useStore } from "@/lib/store"
 
 interface NewSpaceFormProps {
   onCancel?: () => void
@@ -20,10 +21,10 @@ export function NewSpaceForm({ onCancel, onSuccess }: NewSpaceFormProps) {
   const [name, setName] = React.useState("")
   const [description, setDescription] = React.useState("")
   const [isPrivate, setIsPrivate] = React.useState(true)
-  
+
   const router = useRouter()
-  const queryClient = useQueryClient()
-  
+  const isPro = useStore((state) => state.isPro)
+
   const validation = React.useMemo(() => validateSpaceName(name), [name])
 
   const createSpaceMutation = useMutation({
@@ -31,7 +32,8 @@ export function NewSpaceForm({ onCancel, onSuccess }: NewSpaceFormProps) {
       await createSpace(name, description, isPrivate)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['spaces'] })
+      // Note: No invalidateQueries needed - createSpace writes to Dexie DB
+      // and useLiveQuery in useSpaces automatically picks up the change
       toast.success("Space created successfully")
       resetForm()
       onSuccess?.(name)
@@ -67,17 +69,26 @@ export function NewSpaceForm({ onCancel, onSuccess }: NewSpaceFormProps) {
       <header className="flex items-center justify-between px-6 py-4 border-b dark:border-zinc-800">
         <div className="flex items-center gap-2">
           <Image
-            src="/marlin.png"
+            src="/logo-light.svg"
             alt="Marlin Logo"
             width={28}
             height={28}
-            className="rounded-lg"
+            className="hidden dark:block"
+          />
+          <Image
+            src="/logo-dark.svg"
+            alt="Marlin Logo"
+            width={28}
+            height={28}
+            className="block dark:hidden"
           />
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold dark:text-zinc-100">New Space</h2>
-            <span className="rounded-[4px] bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 tracking-wider">
-              PRO
-            </span>
+            {!isPro && (
+              <span className="rounded-[4px] bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 tracking-wider">
+                PRO
+              </span>
+            )}
           </div>
         </div>
         <Button

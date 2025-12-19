@@ -42,12 +42,14 @@ interface UseComposerSubmitOptions {
 interface CreateNoteParams {
   space: string
   content: string
+  images?: string[] // Image filenames to track in frontmatter
 }
 
 interface UpdateNoteParams {
   id: string
   space: string
   content: string
+  images?: string[] // Image filenames to track in frontmatter
 }
 
 // ============================================================================
@@ -61,22 +63,22 @@ export const parseTagsToMentions = (editor: Editor) => {
 
   editor.state.doc.descendants((node, pos) => {
     if (!node.isText || !node.text) return
-    
+
     const text = node.text
     let match
     while ((match = regex.exec(text)) !== null) {
       const matchStart = match.index
       const matchText = match[0]
-      
+
       let start = pos + matchStart
       // Adjust if there was a leading space matched
       if (matchText.startsWith(' ')) {
         start += 1
       }
-      
+
       const id = match[2]
       const end = start + id.length + 1 // +1 for #
-      
+
       replacements.push({ start, end, id })
     }
   })
@@ -86,7 +88,7 @@ export const parseTagsToMentions = (editor: Editor) => {
     const { start, end, id } = replacements[i]
     tr.replaceWith(start, end, editor.schema.nodes.mention.create({ id }))
   }
-  
+
   if (replacements.length > 0) {
     editor.view.dispatch(tr)
   }
@@ -115,7 +117,7 @@ export function useComposerState({
     const timer = setTimeout(() => {
       setIsExpanded(true)
       setCurrentNoteId(editingNoteId)
-      
+
       // Defer content setting to avoid conflict between React render (setIsExpanded)
       // and Tiptap's ReactNodeViewRenderer (which might use flushSync)
       requestAnimationFrame(() => {
@@ -198,8 +200,8 @@ export function useMarlinEditor({ isExpanded, onUpdate, space }: UseMarlinEditor
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: getMarlinExtensions({ 
-      isExpanded, 
+    extensions: getMarlinExtensions({
+      isExpanded,
       placeholder: isExpanded ? 'Write something...' : 'Type a note...',
       space
     }),
@@ -429,9 +431,27 @@ export function useComposerSubmit({
   onSuccess,
 }: UseComposerSubmitOptions) {
   const { createNote, updateNote } = useNoteMutations()
+  const { uploadPendingImages, hasPendingImages } = useImageUpload({ space })
 
   const handleSubmit = async () => {
-    const markdownContent = getMarkdownContent()
+    let markdownContent = getMarkdownContent()
+
+    // Upload any pending base64 images before saving
+    if (hasPendingImages(markdownContent)) {
+      const toastId = toast.loading('Uploading images...')
+      try {
+        markdownContent = await uploadPendingImages(markdownContent)
+        toast.success('Images uploaded!', { id: toastId })
+      } catch (error) {
+        console.error('Failed to upload images:', error)
+        toast.error('Failed to upload images', { id: toastId })
+        throw error // Don't save if images failed to upload
+      }
+    }
+
+    // Extract current images from content for tracking (used by GitHub Actions cleanup)
+    const { extractImageFilenames } = await import('@/lib/utils/markdown')
+    const currentImages = extractImageFilenames(markdownContent)
 
     if (currentNoteId) {
       // Edit existing note
@@ -439,12 +459,14 @@ export function useComposerSubmit({
         id: currentNoteId,
         space,
         content: markdownContent,
+        images: currentImages,
       })
     } else {
       // Create new note
       await createNote({
         space,
         content: markdownContent,
+        images: currentImages,
       })
     }
 
@@ -454,4 +476,169 @@ export function useComposerSubmit({
   return {
     handleSubmit,
   }
+}
+
+// ============================================================================
+// Image Upload Hook (Local-First)
+// ============================================================================
+
+interface UseImageUploadOptions {
+  space: string
+}
+
+/**
+ * Local-first image upload hook
+ * 
+ * Flow:
+ * 1. insertLocalImage: Convert file to base64 data URL, insert into editor immediately (no network)
+ * 2. uploadPendingImages: Called on submit, finds all data URLs, uploads to GitHub, returns final markdown
+ */
+export function useImageUpload({ space }: UseImageUploadOptions) {
+  const { data: user } = useGitHubUser()
+
+  /**
+   * Insert image as base64 data URL immediately (local-first, no network)
+   */
+  const insertLocalImage = async (file: File): Promise<string | null> => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed')
+      return null
+    }
+
+    // Validate file size (5MB)
+    const MAX_SIZE = 5 * 1024 * 1024
+    if (file.size > MAX_SIZE) {
+      toast.error('Image too large. Maximum size is 5MB.')
+      return null
+    }
+
+    // Convert to data URL for immediate display
+    const dataUrl = await fileToDataUrl(file)
+    return dataUrl
+  }
+
+  /**
+   * Upload all pending base64 images in markdown content
+   * Returns the markdown with base64 URLs replaced with real URLs
+   */
+  const uploadPendingImages = async (markdown: string): Promise<string> => {
+    if (!user) {
+      throw new Error('User not authenticated')
+    }
+
+    // Find all base64 image data URLs in markdown
+    // Pattern: ![...](data:image/...;base64,...)
+    const dataUrlPattern = /!\[([^\]]*)\]\((data:image\/[^;]+;base64,[^)]+)\)/g
+    const matches = [...markdown.matchAll(dataUrlPattern)]
+
+    if (matches.length === 0) {
+      return markdown // No pending images
+    }
+
+    // Collect all replacements first to avoid race conditions
+    const replacements: { original: string; replacement: string }[] = []
+
+    const uploadPromises = matches.map(async (match) => {
+      const fullMatch = match[0]
+      const alt = match[1]
+      const dataUrl = match[2]
+
+      try {
+        // Extract base64 content and mime type
+        const [header, base64] = dataUrl.split(',')
+        const mimeMatch = header.match(/data:image\/([^;]+)/)
+        let ext = mimeMatch ? mimeMatch[1] : 'png'
+
+        // Handle special MIME types
+        if (ext === 'svg+xml') ext = 'svg'
+        if (ext === 'jpeg') ext = 'jpg'
+
+        // Generate filename from content hash (SHA-256 for deduplication)
+        const hash = await hashBase64Content(base64)
+        const filename = `${hash}.${ext}`
+
+        // Upload to GitHub
+        const response = await fetch('/api/proxy/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: base64,
+            filename,
+            space,
+            userLogin: user.login,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Upload failed')
+        }
+
+        const { url } = await response.json()
+
+        // Store replacement for later application
+        // Use filename as alt text if original alt is empty
+        const altText = alt || filename
+        replacements.push({
+          original: fullMatch,
+          replacement: `![${altText}](${url})`,
+        })
+      } catch (error) {
+        console.error('Failed to upload image:', error)
+        // Keep the data URL if upload fails - user can retry
+        toast.error('Some images failed to upload')
+      }
+    })
+
+    await Promise.all(uploadPromises)
+
+    // Apply all replacements after all uploads complete
+    let result = markdown
+    for (const { original, replacement } of replacements) {
+      result = result.replace(original, replacement)
+    }
+
+    return result
+  }
+
+  /**
+   * Check if markdown contains pending (unuploaded) images
+   */
+  const hasPendingImages = (markdown: string): boolean => {
+    return /data:image\/[^;]+;base64,/.test(markdown)
+  }
+
+  return {
+    insertLocalImage,
+    uploadPendingImages,
+    hasPendingImages,
+  }
+}
+
+// Helper to convert File to data URL (keeps the data:image/xxx;base64, prefix)
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+// Helper to hash base64 content using SHA-256 for deduplication
+async function hashBase64Content(base64: string): Promise<string> {
+  // Decode base64 to binary
+  const binaryString = atob(base64)
+  const bytes = new Uint8Array(binaryString.length)
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+
+  // Hash using Web Crypto API
+  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+  // Return first 16 chars (64 bits) - enough for uniqueness, shorter filename
+  return hashHex.slice(0, 16)
 }
