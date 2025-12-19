@@ -166,9 +166,15 @@ export async function fetchNotesTree(
 
     return results;
   } catch (error: unknown) {
-    // Re-throw with proper error type
-    if (error instanceof Error && 'status' in error) {
-      throw error;
+    // GraphqlResponseError: Check if repository not found
+    if (error instanceof Error) {
+      const message = error.message || '';
+      // GraphQL throws "Could not resolve to a Repository" when repo doesn't exist
+      if (message.includes('Could not resolve to a Repository') || message.includes('NOT_FOUND')) {
+        const notFoundError = new Error('Repository not found') as GitHubApiError;
+        notFoundError.status = 404;
+        throw notFoundError;
+      }
     }
     throw error;
   }

@@ -6,6 +6,7 @@ import { SpaceHeader } from '@/components/layout/space-header'
 import { use, useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSpaces } from '@/hooks/use-spaces'
+import { db } from '@/lib/client/db'
 import dynamic from 'next/dynamic'
 
 const Composer = dynamic(() => import('@/components/editor/composer').then(mod => mod.Composer), {
@@ -25,20 +26,25 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
   const filterDate = searchParams.get('date') || ''
   const [editContent, setEditContent] = useState<string>()
   const [editingNoteId, setEditingNoteId] = useState<string>()
-  
+
   const { spaces, isLoading: isLoadingSpaces } = useSpaces()
-  
+
   useSync(spaceName)
 
-  // Validate space existence
+  // Validate space existence - directly query Dexie to avoid stale data issues
+  // useLiveQuery may have brief delay after db.spaces.put() completes
   useEffect(() => {
-    if (!isLoadingSpaces && spaces) {
-      const spaceExists = spaces.some(s => s.name === spaceName)
-      if (!spaceExists) {
+    // Don't redirect if still loading
+    if (isLoadingSpaces) return
+
+    // Directly check Dexie DB for immediate consistency
+    db.spaces.get(spaceName).then(space => {
+      if (!space) {
+        // Space doesn't exist in DB, redirect to /app
         router.push('/app')
       }
-    }
-  }, [spaceName, spaces, isLoadingSpaces, router])
+    })
+  }, [spaceName, isLoadingSpaces, router])
 
   const handleEditNote = (content: string, noteId: string) => {
     setEditContent(content)
@@ -60,7 +66,7 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
     } else {
       params.set('q', targetQuery)
     }
-    
+
     router.push(`/${spaceName}?${params.toString()}`, { scroll: false })
   }
 
@@ -68,27 +74,27 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
     <main className="h-[calc(100vh-3.5rem)] md:h-screen dark:bg-zinc-950 flex flex-col overflow-hidden">
       <SpaceHeader spaceName={spaceName} />
       <div className="relative flex-1 min-h-0 overflow-hidden">
-        <article 
+        <article
           data-note-stream-container
           className="h-full overflow-y-auto [scrollbar-gutter:stable] p-3 pb-8 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full"
         >
-          <NoteStream 
-            space={spaceName} 
-            searchQuery={searchQuery} 
-            filterDate={filterDate} 
+          <NoteStream
+            space={spaceName}
+            searchQuery={searchQuery}
+            filterDate={filterDate}
             onEditNote={handleEditNote}
             onTagClick={handleTagClick}
           />
         </article>
         {/* Gradient mask to fade out content before Composer */}
-        <div 
+        <div
           className="absolute bottom-0 left-0 right-0 h-4 pointer-events-none bg-gradient-to-t from-white dark:from-zinc-950 via-white/80 dark:via-zinc-950/80 to-transparent"
           aria-hidden="true"
         />
       </div>
-      <Composer 
-        space={spaceName} 
-        initialContent={editContent} 
+      <Composer
+        space={spaceName}
+        initialContent={editContent}
         editingNoteId={editingNoteId}
         onComplete={handleEditComplete}
       />

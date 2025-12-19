@@ -14,6 +14,7 @@
 
 import { octokit } from '@/lib/client/github-api';
 import { db, type Space } from '@/lib/client/db';
+import { isErrorWithStatus } from '@/lib/utils/type-guards';
 
 export interface GitHubRepo {
   id: number;
@@ -277,11 +278,22 @@ export async function createSpace(
 export async function deleteSpace(name: string, owner: string): Promise<void> {
   const repoName = spaceToRepo(name);
 
-  // Delete repo on GitHub
-  await octokit.rest.repos.delete({
-    owner,
-    repo: repoName,
-  });
+  // Delete repo on GitHub (404 = already deleted, treat as success)
+  try {
+    await octokit.rest.repos.delete({
+      owner,
+      repo: repoName,
+    });
+    console.log(1111)
+  } catch (error: unknown) {
+    // 404 means repo already deleted - that's fine (idempotent)
+    console.log(error)
+    if (isErrorWithStatus(error) && error.status === 404) {
+      console.log(`Repository ${repoName} already deleted`);
+    } else {
+      throw error;
+    }
+  }
 
   // Clean up local database
   await db.transaction('rw', db.notes, db.spaces, async () => {
