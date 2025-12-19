@@ -44,14 +44,14 @@ export async function pushSingleNote(
 ): Promise<void> {
   // Convert space name to repo name for GitHub API
   const repoName = spaceToRepo(space);
-  
+
   // Get note from database
   const note = await db.notes.get(noteId);
   if (!note) {
     // Note might have been permanently deleted
     return;
   }
-  
+
   // Skip if already synced (checking both active and trash states)
   if (note.syncStatus === 'synced') {
     return;
@@ -59,7 +59,7 @@ export async function pushSingleNote(
 
   // Import locally to avoid circular deps
   const { octokit } = await import('@/lib/client/github-api');
-  
+
   try {
     // Mark as syncing
     await db.notes.update(noteId, { syncStatus: 'syncing' });
@@ -69,7 +69,7 @@ export async function pushSingleNote(
     const contentBase64 = btoa(
       String.fromCharCode(...new TextEncoder().encode(fileContent))
     );
-    
+
     // Define paths
     const activePath = `notes/${noteId}.md`;
     const trashPath = `.trash/${noteId}.md`;
@@ -82,61 +82,61 @@ export async function pushSingleNote(
       // If it's an update to an already trashed note, we might need its SHA.
       // For simplicity/robustness in MVP: Try create. If 409 (exists), fetch SHA and update.
       let trashSha: string | undefined = undefined;
-      
+
       try {
-         // Optimistic create/update
-         const { data } = await octokit.rest.repos.createOrUpdateFileContents({
-           owner: userLogin,
-           repo: repoName,
-           path: trashPath,
-           message: `Move note ${noteId} to trash`,
-           content: contentBase64,
-           sha: trashSha, // Undefined initially
-         });
-         trashSha = data.content!.sha!;
+        // Optimistic create/update
+        const { data } = await octokit.rest.repos.createOrUpdateFileContents({
+          owner: userLogin,
+          repo: repoName,
+          path: trashPath,
+          message: `Move note ${noteId} to trash`,
+          content: contentBase64,
+          sha: trashSha, // Undefined initially
+        });
+        trashSha = data.content!.sha!;
       } catch (e: unknown) {
-         if (isErrorWithStatus(e) && (e.status === 409 || getErrorMessage(e).includes('sha'))) {
-            // File exists, fetch SHA and retry update
-            const { data: existing } = await octokit.rest.repos.getContent({
-                owner: userLogin,
-                repo: repoName,
-                path: trashPath,
+        if (isErrorWithStatus(e) && (e.status === 409 || getErrorMessage(e).includes('sha'))) {
+          // File exists, fetch SHA and retry update
+          const { data: existing } = await octokit.rest.repos.getContent({
+            owner: userLogin,
+            repo: repoName,
+            path: trashPath,
+          });
+
+          if (isGitHubFile(existing)) {
+            const { data } = await octokit.rest.repos.createOrUpdateFileContents({
+              owner: userLogin,
+              repo: repoName,
+              path: trashPath,
+              message: `Update note ${noteId} in trash`,
+              content: contentBase64,
+              sha: existing.sha,
             });
-            
-            if (isGitHubFile(existing)) {
-              const { data } = await octokit.rest.repos.createOrUpdateFileContents({
-                owner: userLogin,
-                repo: repoName,
-                path: trashPath,
-                message: `Update note ${noteId} in trash`,
-                content: contentBase64,
-                sha: existing.sha,
-              });
-              trashSha = data.content!.sha!;
-            } else {
-              throw new Error('Retrieved object is not a file');
-            }
-         } else {
-            throw e;
-         }
+            trashSha = data.content!.sha!;
+          } else {
+            throw new Error('Retrieved object is not a file');
+          }
+        } else {
+          throw e;
+        }
       }
 
       // 2. Delete from notes/ (Cleanup)
       // Use the known SHA from local DB (which refers to the active note)
       if (note.sha && note.sha !== 'pending') {
         try {
-           await octokit.rest.repos.deleteFile({
-             owner: userLogin,
-             repo: repoName,
-             path: activePath,
-             message: `Cleanup active note ${noteId}`,
-             sha: note.sha,
-           });
+          await octokit.rest.repos.deleteFile({
+            owner: userLogin,
+            repo: repoName,
+            path: activePath,
+            message: `Cleanup active note ${noteId}`,
+            sha: note.sha,
+          });
         } catch (e: unknown) {
-           if (isErrorWithStatus(e) && e.status !== 404) {
-             console.warn(`Failed to cleanup active note ${noteId}:`, e);
-             // Non-fatal, just means it might not have existed or SHA mismatch
-           }
+          if (isErrorWithStatus(e) && e.status !== 404) {
+            console.warn(`Failed to cleanup active note ${noteId}:`, e);
+            // Non-fatal, just means it might not have existed or SHA mismatch
+          }
         }
       }
 
@@ -151,10 +151,10 @@ export async function pushSingleNote(
 
     // --- BRANCH 2: RESTORE or UPDATE (Move to notes/) ---
     // 1. Upload to notes/
-    
+
     let response;
     try {
-       response = await octokit.rest.repos.createOrUpdateFileContents({
+      response = await octokit.rest.repos.createOrUpdateFileContents({
         owner: userLogin,
         repo: repoName,
         path: activePath,
@@ -163,42 +163,42 @@ export async function pushSingleNote(
         sha: note.sha,
       });
     } catch (e: unknown) {
-       // If SHA was from .trash file, it won't work for notes/ file (which might not exist or has diff SHA).
-       // Fallback: Fetch SHA of notes/ file (if exists) or use null (create).
-       try {
-         const { data: existing } = await octokit.rest.repos.getContent({
+      // If SHA was from .trash file, it won't work for notes/ file (which might not exist or has diff SHA).
+      // Fallback: Fetch SHA of notes/ file (if exists) or use null (create).
+      try {
+        const { data: existing } = await octokit.rest.repos.getContent({
+          owner: userLogin,
+          repo: repoName,
+          path: activePath,
+        });
+
+        if (isGitHubFile(existing)) {
+          response = await octokit.rest.repos.createOrUpdateFileContents({
             owner: userLogin,
             repo: repoName,
             path: activePath,
-         });
-
-         if (isGitHubFile(existing)) {
-            response = await octokit.rest.repos.createOrUpdateFileContents({
-              owner: userLogin,
-              repo: repoName,
-              path: activePath,
-              message: `Update note ${noteId}`,
-              content: contentBase64,
-              sha: existing.sha,
-            });
-         } else {
-            throw new Error('Retrieved object is not a file');
-         }
-       } catch (inner: unknown) {
-          if (isErrorWithStatus(inner) && inner.status === 404) {
-             // File doesn't exist, create it (sha = undefined)
-             response = await octokit.rest.repos.createOrUpdateFileContents({
-                owner: userLogin,
-                repo: repoName,
-                path: activePath,
-                message: `Restore note ${noteId}`,
-                content: contentBase64,
-                sha: undefined,
-             });
-          } else {
-             throw inner;
-          }
-       }
+            message: `Update note ${noteId}`,
+            content: contentBase64,
+            sha: existing.sha,
+          });
+        } else {
+          throw new Error('Retrieved object is not a file');
+        }
+      } catch (inner: unknown) {
+        if (isErrorWithStatus(inner) && inner.status === 404) {
+          // File doesn't exist, create it (sha = undefined)
+          response = await octokit.rest.repos.createOrUpdateFileContents({
+            owner: userLogin,
+            repo: repoName,
+            path: activePath,
+            message: `Restore note ${noteId}`,
+            content: contentBase64,
+            sha: undefined,
+          });
+        } else {
+          throw inner;
+        }
+      }
     }
 
     // 2. Delete from .trash/ (Cleanup if restoring)
@@ -206,23 +206,23 @@ export async function pushSingleNote(
     // To save API calls, maybe only do this if we suspect it was in trash?
     // Cost of 404 is low.
     try {
-       const { data: trashFile } = await octokit.rest.repos.getContent({
-            owner: userLogin,
-            repo: repoName,
-            path: trashPath,
-       });
+      const { data: trashFile } = await octokit.rest.repos.getContent({
+        owner: userLogin,
+        repo: repoName,
+        path: trashPath,
+      });
 
-       if (isGitHubFile(trashFile)) {
-         await octokit.rest.repos.deleteFile({
-            owner: userLogin,
-            repo: repoName,
-            path: trashPath,
-            message: `Cleanup trash note ${noteId}`,
-            sha: trashFile.sha,
-         });
-       }
+      if (isGitHubFile(trashFile)) {
+        await octokit.rest.repos.deleteFile({
+          owner: userLogin,
+          repo: repoName,
+          path: trashPath,
+          message: `Cleanup trash note ${noteId}`,
+          sha: trashFile.sha,
+        });
+      }
     } catch (e: unknown) {
-       // Ignore 404 (not in trash)
+      // Ignore 404 (not in trash)
     }
 
     // 3. Update local state
@@ -251,7 +251,7 @@ export async function pushSingleNote(
         errorMessage: errorMsg || 'Sync failed',
       });
     }
-    
+
     throw error;
   }
 }
@@ -292,14 +292,14 @@ export async function syncWorkspace(
   const repoName = spaceToRepo(space);
 
   // ========== PHASE 1: SNAPSHOT ==========
-  
+
   // Check if remote has changed (Cost Efficiency)
   let remoteTreeSha: string | null = null;
   if (knownRemoteSha) {
     try {
       const { fetchRemoteTreeSha } = await import('@/lib/client/github-api');
       remoteTreeSha = await fetchRemoteTreeSha(userLogin, repoName);
-      
+
       if (remoteTreeSha && remoteTreeSha === knownRemoteSha) {
         // No changes on remote, and assuming local is clean (handled by caller logic usually, but here we prioritize remote check)
         // Note: Ideally we also check if local is dirty. But for "Background Sync", checking remote is the main optimization.
@@ -310,7 +310,7 @@ export async function syncWorkspace(
         // Let's check local dirty state briefly?
         const dirtyNotes = await db.notes.where('syncStatus').notEqual('synced').count();
         if (dirtyNotes === 0) {
-           return { uploaded: 0, downloaded: 0, pruned: 0, conflicts: 0, skipped: true, latestSha: remoteTreeSha };
+          return { uploaded: 0, downloaded: 0, pruned: 0, conflicts: 0, skipped: true, latestSha: remoteTreeSha };
         }
       }
     } catch (e) {
@@ -319,12 +319,29 @@ export async function syncWorkspace(
   }
 
   // Fetch remote tree
-  const noteFiles = await fetchNotesTree(userLogin, repoName);
-  
+  let noteFiles;
+  try {
+    noteFiles = await fetchNotesTree(userLogin, repoName);
+  } catch (error: unknown) {
+    // If repo was deleted remotely (404), clean up local space
+    if (isErrorWithStatus(error) && error.status === 404) {
+      console.log(`Remote repository ${repoName} not found, cleaning up local space ${space}`);
+
+      // Delete all notes in this space
+      await db.transaction('rw', db.notes, db.spaces, async () => {
+        await db.notes.where('space').equals(space).delete();
+        await db.spaces.delete(space);
+      });
+
+      throw new Error('Remote repository was deleted');
+    }
+    throw error;
+  }
+
   // Update the tree SHA if we didn't get it earlier or if we are here now
   // Since fetchNotesTree doesn't return the tree SHA, we might rely on the earlier fetch or just return undefined if we missed it.
   // Actually, let's trust the one we got if we did.
-  
+
   // Build remote map (ID without .md suffix -> { sha, path })
   const remoteMap = new Map<string, { sha: string; path: string }>(
     noteFiles.map((f) => [
@@ -332,20 +349,20 @@ export async function syncWorkspace(
       { sha: f.sha, path: f.path }
     ])
   );
-  
+
   // Get local notes
   const localNotes = await db.notes.where('space').equals(space).toArray();
   const localMap = new Map(localNotes.map(n => [n.id, n]));
 
   // ========== PHASE 2: PULL & PRUNE ==========
-  
+
   // A. Download Updates
   const toDownload: Array<{ id: string; sha: string; path: string }> = [];
-  
+
   for (const file of noteFiles) {
     const id = file.path.split('/').pop()!.replace(/\.md$/, '');
     const localNote = localMap.get(id);
-    
+
     if (!localNote) {
       // New note from remote
       toDownload.push({ id, sha: file.sha, path: file.path });
@@ -355,23 +372,23 @@ export async function syncWorkspace(
     }
     // Skip if local is dirty (modified/pending)
   }
-  
+
   // Batch download
   const BATCH_SIZE = 50;
   for (let i = 0; i < toDownload.length; i += BATCH_SIZE) {
     const batch = toDownload.slice(i, i + BATCH_SIZE);
     const shas = batch.map(f => f.sha);
-    
+
     try {
       const contents = await fetchBlobs(userLogin, repoName, shas);
-      
+
       for (const file of batch) {
         const content = contents[file.sha];
         if (content) {
           try {
             const parsed = parseNote(content);
             const isTrash = file.path.startsWith('.trash/');
-            
+
             await db.notes.put({
               id: file.id,
               sha: file.sha,
@@ -388,33 +405,33 @@ export async function syncWorkspace(
             console.error(`Failed to parse note ${file.id}:`, error);
           }
         } else {
-           console.error(`Failed to fetch content for note ${file.id}`);
+          console.error(`Failed to fetch content for note ${file.id}`);
         }
       }
     } catch (error) {
       console.error(`Failed to fetch batch:`, error);
     }
   }
-  
+
   // B. Prune Deletions
   const toPrune: string[] = [];
-  
+
   for (const [id, localNote] of localMap) {
     if (!remoteMap.has(id) && localNote.syncStatus === 'synced') {
       toPrune.push(id);
     }
   }
-  
+
   if (toPrune.length > 0) {
     await db.notes.bulkDelete(toPrune);
     pruned = toPrune.length;
   }
 
   // ========== PHASE 3: PUSH & RESOLVE ==========
-  
+
   // Get fresh local state after pull
   const localNotesAfterPull = await db.notes.where('space').equals(space).toArray();
-  
+
   for (const note of localNotesAfterPull) {
     // Skip if already synced (whether active or deleted)
     if (note.syncStatus === 'synced') continue;
@@ -424,112 +441,112 @@ export async function syncWorkspace(
       // Logic: Move to .trash/
       // 1. Put to .trash/
       // 2. Delete from notes/
-      
+
       try {
-         await db.notes.update(note.id, { syncStatus: 'syncing' });
-         
-         // Import locally
-         const { octokit } = await import('@/lib/client/github-api');
-         
-         // 1. Upload to .trash/
-         const fileContent = stringifyNote(note);
-         const contentBase64 = btoa(
-           String.fromCharCode(...new TextEncoder().encode(fileContent))
-         );
-         
-         let trashSha: string | undefined = undefined;
-         
-         try {
-             const { data } = await octokit.rest.repos.createOrUpdateFileContents({
-               owner: userLogin,
-               repo: repoName,
-               path: `.trash/${note.id}.md`,
-               message: `Sync move note ${note.id} to trash`,
-               content: contentBase64,
-               sha: undefined, // Try create first
-             });
-             trashSha = data.content!.sha!;
-         } catch (e: unknown) {
-             // Handle both 409 (Conflict) and 422 (Unprocessable Entity - often means file exists but no SHA provided)
-             const errMsg = getErrorMessage(e);
-             if ((isErrorWithStatus(e) && (e.status === 409 || e.status === 422)) || errMsg.includes('sha')) {
-                // Exists, fetch SHA and update
-                const { data: existing } = await octokit.rest.repos.getContent({
-                    owner: userLogin,
-                    repo: repoName,
-                    path: `.trash/${note.id}.md`
-                });
+        await db.notes.update(note.id, { syncStatus: 'syncing' });
 
-                if (isGitHubFile(existing)) {
-                  const { data } = await octokit.rest.repos.createOrUpdateFileContents({
-                    owner: userLogin,
-                    repo: repoName,
-                    path: `.trash/${note.id}.md`,
-                    message: `Sync update note ${note.id} in trash`,
-                    content: contentBase64,
-                    sha: existing.sha,
-                  });
-                  trashSha = data.content!.sha!;
-                } else {
-                  throw new Error('Retrieved object is not a file');
-                }
-             } else {
-                throw e;
-             }
-         }
+        // Import locally
+        const { octokit } = await import('@/lib/client/github-api');
 
-         // 2. Delete from notes/ (Cleanup)
-         const remoteInfo = remoteMap.get(note.id);
-         
-         // Only try to delete if it exists in 'notes/' directory remotely
-         if (remoteInfo && remoteInfo.path.startsWith('notes/')) {
-           try {
-              await octokit.rest.repos.deleteFile({
+        // 1. Upload to .trash/
+        const fileContent = stringifyNote(note);
+        const contentBase64 = btoa(
+          String.fromCharCode(...new TextEncoder().encode(fileContent))
+        );
+
+        let trashSha: string | undefined = undefined;
+
+        try {
+          const { data } = await octokit.rest.repos.createOrUpdateFileContents({
+            owner: userLogin,
+            repo: repoName,
+            path: `.trash/${note.id}.md`,
+            message: `Sync move note ${note.id} to trash`,
+            content: contentBase64,
+            sha: undefined, // Try create first
+          });
+          trashSha = data.content!.sha!;
+        } catch (e: unknown) {
+          // Handle both 409 (Conflict) and 422 (Unprocessable Entity - often means file exists but no SHA provided)
+          const errMsg = getErrorMessage(e);
+          if ((isErrorWithStatus(e) && (e.status === 409 || e.status === 422)) || errMsg.includes('sha')) {
+            // Exists, fetch SHA and update
+            const { data: existing } = await octokit.rest.repos.getContent({
+              owner: userLogin,
+              repo: repoName,
+              path: `.trash/${note.id}.md`
+            });
+
+            if (isGitHubFile(existing)) {
+              const { data } = await octokit.rest.repos.createOrUpdateFileContents({
                 owner: userLogin,
                 repo: repoName,
-                path: `notes/${note.id}.md`,
-                message: `Cleanup active note ${note.id}`,
-                sha: remoteInfo.sha, // Use the correct SHA from the correct path
+                path: `.trash/${note.id}.md`,
+                message: `Sync update note ${note.id} in trash`,
+                content: contentBase64,
+                sha: existing.sha,
               });
-           } catch (e: unknown) {
-              // Ignore 404
-           }
-         }
-         
-         await db.notes.update(note.id, {
-             sha: trashSha,
-             syncStatus: 'synced',
-             errorMessage: undefined
-         });
-         uploaded++;
+              trashSha = data.content!.sha!;
+            } else {
+              throw new Error('Retrieved object is not a file');
+            }
+          } else {
+            throw e;
+          }
+        }
+
+        // 2. Delete from notes/ (Cleanup)
+        const remoteInfo = remoteMap.get(note.id);
+
+        // Only try to delete if it exists in 'notes/' directory remotely
+        if (remoteInfo && remoteInfo.path.startsWith('notes/')) {
+          try {
+            await octokit.rest.repos.deleteFile({
+              owner: userLogin,
+              repo: repoName,
+              path: `notes/${note.id}.md`,
+              message: `Cleanup active note ${note.id}`,
+              sha: remoteInfo.sha, // Use the correct SHA from the correct path
+            });
+          } catch (e: unknown) {
+            // Ignore 404
+          }
+        }
+
+        await db.notes.update(note.id, {
+          sha: trashSha,
+          syncStatus: 'synced',
+          errorMessage: undefined
+        });
+        uploaded++;
       } catch (e: unknown) {
-         console.error(`Failed to sync deletion for ${note.id}:`, e);
-         await db.notes.update(note.id, {
-           syncStatus: 'error',
-           errorMessage: getErrorMessage(e) || 'Delete sync failed'
-         });
+        console.error(`Failed to sync deletion for ${note.id}:`, e);
+        await db.notes.update(note.id, {
+          syncStatus: 'error',
+          errorMessage: getErrorMessage(e) || 'Delete sync failed'
+        });
       }
       continue;
     }
 
     if (['pending', 'modified', 'error'].includes(note.syncStatus)) {
-      
+
       const remoteInfo = remoteMap.get(note.id);
       const remoteSha = remoteInfo?.sha;
-      
+
       // Conflict detection
       const hasConflict = (
         (note.sha && remoteSha && note.sha !== remoteSha) ||
         (!note.sha && remoteSha)
       );
-      
+
       if (hasConflict) {
         // Fork conflicted note
         conflicts++;
         try {
           const timestamp = Date.now();
           const conflictId = `${note.id}_conflict_${timestamp}`;
-          
+
           await db.notes.add({
             ...note,
             id: conflictId,
@@ -537,24 +554,24 @@ export async function syncWorkspace(
             syncStatus: 'pending',
             sha: undefined,
           });
-          
+
           // Mark original for re-download
           await db.notes.update(note.id, {
             syncStatus: 'synced',
             sha: remoteSha,
           });
-          
+
           console.warn(`Conflict: ${note.id} -> ${conflictId}`);
         } catch (error) {
           console.error(`Failed to fork conflict ${note.id}:`, error);
         }
         continue;
       }
-      
+
       // No conflict: Upload
       try {
         await db.notes.update(note.id, { syncStatus: 'syncing' });
-        
+
         // Import locally
         const { octokit } = await import('@/lib/client/github-api');
 
@@ -562,7 +579,7 @@ export async function syncWorkspace(
         const contentBase64 = btoa(
           String.fromCharCode(...new TextEncoder().encode(fileContent))
         );
-        
+
         const { data } = await octokit.rest.repos.createOrUpdateFileContents({
           owner: userLogin,
           repo: repoName,
@@ -571,7 +588,7 @@ export async function syncWorkspace(
           content: contentBase64,
           sha: note.sha,
         });
-        
+
         await db.notes.update(note.id, {
           sha: data.content!.sha!,
           syncStatus: 'synced',
@@ -610,12 +627,12 @@ export async function retrySingleNote(
   if (!note || note.syncStatus !== 'error') {
     throw new Error('Note not in error state');
   }
-  
+
   // Clear error and retry fast sync
   await db.notes.update(noteId, {
     syncStatus: 'modified',
     errorMessage: undefined,
   });
-  
+
   await pushSingleNote(noteId, space, userLogin);
 }

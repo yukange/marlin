@@ -122,34 +122,56 @@ export async function fetchNotesTree(
     }
   `;
 
-  const data = await octokit.graphql<RepositoryQuery>(query, { owner, repo });
-  const results: Array<{ path: string; sha: string; type: 'blob' }> = [];
+  try {
+    const data = await octokit.graphql<RepositoryQuery>(query, { owner, repo });
 
-  // Process notes/ directory
-  const notesEntries = data.repository?.notesTree?.entries || [];
-  notesEntries.forEach((e) => {
-    if (e.type === 'blob' && e.name.endsWith('.md')) {
-      results.push({
-        path: `notes/${e.name}`,
-        sha: e.oid,
-        type: 'blob',
-      });
+    // Check for GraphQL errors (repository not found)
+    // GraphQL may return 200 but include errors array
+    if ('errors' in data && Array.isArray(data.errors)) {
+      const notFoundError = (data.errors as any[]).find(
+        (err: any) => err.type === 'NOT_FOUND'
+      );
+      if (notFoundError) {
+        const error = new Error('Repository not found') as GitHubApiError;
+        error.status = 404;
+        throw error;
+      }
     }
-  });
 
-  // Process .trash/ directory
-  const trashEntries = data.repository?.trashTree?.entries || [];
-  trashEntries.forEach((e) => {
-    if (e.type === 'blob' && e.name.endsWith('.md')) {
-      results.push({
-        path: `.trash/${e.name}`,
-        sha: e.oid,
-        type: 'blob',
-      });
+    const results: Array<{ path: string; sha: string; type: 'blob' }> = [];
+
+    // Process notes/ directory
+    const notesEntries = data.repository?.notesTree?.entries || [];
+    notesEntries.forEach((e) => {
+      if (e.type === 'blob' && e.name.endsWith('.md')) {
+        results.push({
+          path: `notes/${e.name}`,
+          sha: e.oid,
+          type: 'blob',
+        });
+      }
+    });
+
+    // Process .trash/ directory
+    const trashEntries = data.repository?.trashTree?.entries || [];
+    trashEntries.forEach((e) => {
+      if (e.type === 'blob' && e.name.endsWith('.md')) {
+        results.push({
+          path: `.trash/${e.name}`,
+          sha: e.oid,
+          type: 'blob',
+        });
+      }
+    });
+
+    return results;
+  } catch (error: unknown) {
+    // Re-throw with proper error type
+    if (error instanceof Error && 'status' in error) {
+      throw error;
     }
-  });
-  
-  return results;
+    throw error;
+  }
 }
 
 /**
