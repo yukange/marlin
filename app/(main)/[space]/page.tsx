@@ -24,6 +24,7 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get('q') || ''
   const filterDate = searchParams.get('date') || ''
+  const filterTemplates = searchParams.get('filter') === 'templates'
   const [editContent, setEditContent] = useState<string>()
   const [editingNoteId, setEditingNoteId] = useState<string>()
 
@@ -82,6 +83,7 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
             space={spaceName}
             searchQuery={searchQuery}
             filterDate={filterDate}
+            filterTemplates={filterTemplates}
             onEditNote={handleEditNote}
             onTagClick={handleTagClick}
           />

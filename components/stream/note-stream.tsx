@@ -6,7 +6,7 @@ import { useNotes } from '@/hooks/use-notes'
 import { useNoteMutations } from '@/hooks/use-composer'
 import { useConfirmDialogStore } from '@/hooks/use-confirm-dialog'
 import { formatRelativeTime, formatPreciseTime } from '@/lib/utils/date'
-import { MoreHorizontal, Trash2, ExternalLink, ChevronDown, ChevronUp, Edit, RefreshCw, ArchiveRestore, Globe } from 'lucide-react'
+import { MoreHorizontal, Trash2, ExternalLink, ChevronDown, ChevronUp, Edit, RefreshCw, ArchiveRestore, Globe, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -36,6 +36,7 @@ interface NoteCardProps {
   space: string
   highlight?: string
   isInTrash?: boolean
+  onToggleTemplate?: (note: Note) => void
 }
 
 function NoteCard({
@@ -46,6 +47,7 @@ function NoteCard({
   onTagClick,
   onRestore,
   onPermanentDelete,
+  onToggleTemplate,
   space,
   highlight,
   isInTrash
@@ -257,6 +259,10 @@ function NoteCard({
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open in GitHub
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onToggleTemplate?.(note)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    {note.isTemplate ? 'Unmark Template' : 'Mark as Template'}
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => onDelete(note)}
@@ -329,14 +335,15 @@ interface NoteStreamProps {
   space: string
   searchQuery?: string
   filterDate?: string
+  filterTemplates?: boolean
   onEditNote?: (content: string, noteId: string) => void
   onTagClick?: (tag: string) => void
   isInTrash?: boolean
 }
 
-export function NoteStream({ space, searchQuery = '', filterDate = '', onEditNote, onTagClick, isInTrash = false }: NoteStreamProps) {
-  const notes = useNotes(space, searchQuery, filterDate, isInTrash)
-  const { deleteNote, restoreNote, permanentDeleteNote, retrySync } = useNoteMutations()
+export function NoteStream({ space, searchQuery = '', filterDate = '', filterTemplates = false, onEditNote, onTagClick, isInTrash = false }: NoteStreamProps) {
+  const notes = useNotes(space, searchQuery, filterDate, isInTrash, filterTemplates)
+  const { deleteNote, restoreNote, permanentDeleteNote, retrySync, toggleTemplate } = useNoteMutations()
   const openDialog = useConfirmDialogStore((state) => state.openDialog)
 
   const handleEdit = (note: Note) => {
@@ -353,6 +360,10 @@ export function NoteStream({ space, searchQuery = '', filterDate = '', onEditNot
 
   const handleRestore = async (note: Note) => {
     await restoreNote(note.id, space)
+  }
+
+  const handleToggleTemplate = async (note: Note) => {
+    await toggleTemplate(note.id, space, !note.isTemplate)
   }
 
   const handlePermanentDelete = async (note: Note) => {
@@ -401,6 +412,7 @@ export function NoteStream({ space, searchQuery = '', filterDate = '', onEditNot
           onTagClick={onTagClick || (() => { })}
           onRestore={handleRestore}
           onPermanentDelete={handlePermanentDelete}
+          onToggleTemplate={handleToggleTemplate}
           space={space}
           highlight={searchQuery}
           isInTrash={isInTrash}

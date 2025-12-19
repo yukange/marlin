@@ -21,6 +21,7 @@ export interface ParsedNote {
   deletedAt?: number;
   title?: string;
   images?: string[]; // Image filenames stored in repo
+  isTemplate?: boolean; // true: this note is a template
 }
 
 /**
@@ -53,6 +54,7 @@ export function parseNote(raw: string): ParsedNote {
     deletedAt: typeof data.deletedAt === 'number' ? data.deletedAt : undefined,
     title: typeof data.title === 'string' ? data.title : undefined,
     images: Array.isArray(data.images) ? data.images : undefined,
+    isTemplate: typeof data.isTemplate === 'boolean' ? data.isTemplate : undefined,
   };
 }
 
@@ -76,7 +78,7 @@ export function parseNote(raw: string): ParsedNote {
  * @returns Markdown string with frontmatter
  */
 export function stringifyNote(
-  note: Pick<Note, 'content' | 'tags' | 'date' | 'deleted' | 'deletedAt' | 'title'> & { images?: string[] }
+  note: Pick<Note, 'content' | 'tags' | 'date' | 'deleted' | 'deletedAt' | 'title' | 'isTemplate'> & { images?: string[] }
 ): string {
   const frontmatter: Record<string, any> = {
     tags: note.tags,
@@ -98,6 +100,11 @@ export function stringifyNote(
     if (note.deletedAt) {
       frontmatter.deletedAt = note.deletedAt;
     }
+  }
+
+  // Include isTemplate field for templates
+  if (note.isTemplate) {
+    frontmatter.isTemplate = true;
   }
 
   return matter.stringify(note.content, frontmatter);

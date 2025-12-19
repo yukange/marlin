@@ -399,6 +399,8 @@ export async function syncWorkspace(
               syncStatus: 'synced',
               deleted: isTrash, // Enforce deleted status based on folder
               deletedAt: isTrash ? (parsed.deletedAt || Date.now()) : undefined,
+              title: parsed.title,
+              isTemplate: parsed.isTemplate,
             });
             downloaded++;
           } catch (error) {

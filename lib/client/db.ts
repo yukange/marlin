@@ -24,6 +24,7 @@ export interface Note {
   deleted?: boolean; // true: deleted (in trash), false/undefined: active
   deletedAt?: number; // Unix timestamp when note was moved to trash
   title?: string; // Extracted from the first line if it starts with #
+  isTemplate?: boolean; // true: this note is a template (Pro feature)
 }
 
 export interface Space {
@@ -96,6 +97,12 @@ db.version(6).stores({
   spaces: 'name, repoName, updatedAt'
 });
 
+// Version 7: Add 'isTemplate' field for Template feature (Pro)
+db.version(7).stores({
+  notes: 'id, sha, content, *tags, date, space, syncStatus, deleted, deletedAt, title, isTemplate, [space+date]',
+  spaces: 'name, repoName, updatedAt'
+});
+
 /**
  * Check if there are any unsynced changes in the database
  * 
@@ -106,7 +113,7 @@ export async function hasUnsyncedChanges(): Promise<boolean> {
     .where('syncStatus')
     .anyOf(['pending', 'modified', 'syncing', 'error'])
     .count();
-    
+
   // Also check for pending deletions (tombstones)
   const pendingDeletions = await db.notes
     .filter(n => n.deleted === true && n.syncStatus !== 'synced')

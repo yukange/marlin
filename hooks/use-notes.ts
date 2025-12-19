@@ -17,11 +17,11 @@ import { db } from '@/lib/client/db'
  * @param isInTrash - Whether to show deleted notes (default: false)
  * @returns Filtered notes array or undefined during loading
  */
-export function useNotes(space: string, searchQuery = '', filterDate = '', isInTrash = false) {
+export function useNotes(space: string, searchQuery = '', filterDate = '', isInTrash = false, filterTemplates = false) {
   const notes = useLiveQuery(
     async () => {
       const lowerQuery = searchQuery.trim().toLowerCase()
-      
+
       // Optimization: Default view (Space Only)
       // Use compound index [space+date] to fetch sorted results directly from DB engine
       if (!lowerQuery && !filterDate.trim()) {
@@ -30,20 +30,24 @@ export function useNotes(space: string, searchQuery = '', filterDate = '', isInT
           .between([space, Dexie.minKey], [space, Dexie.maxKey])
           .reverse()
 
-        // Filter by deleted status
+        // Filter by deleted status and template status
         // Note: Dexie filters are applied in memory after fetching from index, 
         // but it's still faster than full table scan.
-        return collection.filter(n => !!n.deleted === isInTrash).toArray()
+        return collection.filter(n => {
+          if (!!n.deleted !== isInTrash) return false
+          if (filterTemplates && !n.isTemplate) return false
+          return true
+        }).toArray()
       }
 
       const isTagSearch = lowerQuery.startsWith('#') && lowerQuery.length > 1
-      
+
       let filteredNotes: any[] = []
 
       // Optimization: For tag searches, use the tags index
       if (isTagSearch) {
         const tagToSearch = lowerQuery.slice(1)
-        
+
         // Use the multi-entry index for tags
         // This is much faster than scanning all notes in the space
         const notesByTag = await db.notes
@@ -114,7 +118,7 @@ export function useNotes(space: string, searchQuery = '', filterDate = '', isInT
       const sortedNotes = await collection.sortBy('date')
       return sortedNotes.reverse()
     },
-    [space, searchQuery, filterDate, isInTrash]
+    [space, searchQuery, filterDate, isInTrash, filterTemplates]
   )
 
   return notes

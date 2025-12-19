@@ -94,6 +94,18 @@ export const parseTagsToMentions = (editor: Editor) => {
   }
 }
 
+/**
+ * Insert template content at cursor position (standalone helper)
+ * - Inserts content at current cursor
+ * - Parses hashtags to styled mention nodes
+ * - Scrolls to show inserted content
+ */
+export const insertTemplateContent = (editor: Editor, content: string) => {
+  editor.chain().focus().insertContent(content).run()
+  parseTagsToMentions(editor)
+  editor.commands.scrollIntoView()
+}
+
 // ============================================================================
 // Composer State Hook
 // ============================================================================
@@ -135,6 +147,12 @@ export function useComposerState({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       const target = 'touches' in event ? event.touches[0]?.target : event.target
+
+      // Check if click matches ignore selector (e.g., for popovers/dialogs rendered in portals)
+      if (target instanceof Element && target.closest('[data-composer-ignore-outside]')) {
+        return
+      }
+
       if (editorRef.current && target && !editorRef.current.contains(target as Node)) {
         if (isEmpty && isExpanded && !currentNoteId) {
           setIsExpanded(false)
@@ -242,6 +260,19 @@ export function useMarlinEditor({ isExpanded, onUpdate, space }: UseMarlinEditor
     }
   }
 
+  /**
+   * Insert template content at cursor position
+   * - Inserts content at current cursor
+   * - Parses hashtags to styled mention nodes
+   * - Scrolls to show inserted content
+   */
+  const insertTemplate = (content: string) => {
+    if (!editor) return
+    editor.chain().focus().insertContent(content).run()
+    parseTagsToMentions(editor)
+    editor.commands.scrollIntoView()
+  }
+
   const clearContent = () => {
     editor?.commands.clearContent()
   }
@@ -258,6 +289,7 @@ export function useMarlinEditor({ isExpanded, onUpdate, space }: UseMarlinEditor
     editor,
     getMarkdownContent,
     setContent,
+    insertTemplate,
     clearContent,
     focus,
   }
@@ -410,6 +442,22 @@ export function useNoteMutations() {
     }
   }
 
+  const toggleTemplate = async (noteId: string, space: string, isTemplate: boolean) => {
+    if (!user) {
+      toast.error('User not authenticated')
+      return
+    }
+    try {
+      const { toggleNoteTemplate } = await import('@/lib/services/note-service')
+      await toggleNoteTemplate(noteId, space, user.login, isTemplate)
+      toast.success(isTemplate ? 'Marked as template' : 'Unmarked template')
+    } catch (error) {
+      console.error('Failed to toggle template:', error)
+      toast.error('Failed to update template status')
+      throw error
+    }
+  }
+
   return {
     createNote,
     updateNote,
@@ -417,6 +465,7 @@ export function useNoteMutations() {
     restoreNote,
     permanentDeleteNote,
     retrySync,
+    toggleTemplate,
   }
 }
 

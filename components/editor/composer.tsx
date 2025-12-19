@@ -10,6 +10,7 @@ import { useStore } from '@/lib/store'
 import { cn, getPlatformKey } from '@/lib/utils'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
+import { TemplatePicker } from './template-picker'
 
 interface ComposerProps {
   space: string
@@ -48,7 +49,7 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
   })
 
   // Tiptap editor
-  const { editor, getMarkdownContent, setContent, clearContent, focus } = useMarlinEditor({
+  const { editor, getMarkdownContent, setContent, insertTemplate, clearContent, focus } = useMarlinEditor({
     isExpanded,
     onUpdate: setIsEmpty,
     space,
@@ -326,6 +327,21 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
                   </span>
                 )}
               </Toggle>
+              <TemplatePicker
+                space={space}
+                onSelect={(content) => {
+                  if (!isPro && !isBeta) {
+                    toast.error('Templates are a PRO feature')
+                    return
+                  }
+                  // Ensure composer stays expanded and insert template
+                  expand()
+                  requestAnimationFrame(() => {
+                    insertTemplate(content)
+                  })
+                }}
+                disabled={!editor}
+              />
             </nav>
             <div className="flex items-center gap-2">
               <Button

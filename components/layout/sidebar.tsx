@@ -7,8 +7,8 @@ import { UserNav } from "@/components/layout/user-nav"
 import { Heatmap } from "@/components/layout/heatmap"
 import { NewSpaceForm } from "@/components/layout/new-space-form"
 import { cn } from "@/lib/utils"
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, Hash, Trash2, Library } from "lucide-react"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
+import { Hash, Trash2, Library, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter, useParams, useSearchParams, usePathname } from "next/navigation"
 import { useLiveQuery } from "dexie-react-hooks"
@@ -30,7 +30,8 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
   const currentQuery = searchParams.get('q') || ''
 
   const isTrashActive = pathname?.endsWith('/trash')
-  const isAllNotesActive = pathname === `/${currentSpaceName}` && !currentQuery && !isTrashActive
+  const isTemplatesActive = searchParams.get('filter') === 'templates'
+  const isAllNotesActive = pathname === `/${currentSpaceName}` && !currentQuery && !isTrashActive && !isTemplatesActive
 
   const allTags = useLiveQuery(
     async () => {
@@ -141,6 +142,25 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
             >
               <Library className="mr-2 h-4 w-4" />
               All Notes
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "w-full flex items-center justify-start px-3 py-2 text-sm rounded-md transition-colors",
+                isTemplatesActive
+                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium"
+                  : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+              )}
+              onClick={() => {
+                if (isTemplatesActive) {
+                  router.push(`/${currentSpaceName}`)
+                } else {
+                  router.push(`/${currentSpaceName}?filter=templates`)
+                }
+              }}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Templates
             </button>
           </div>
         )}

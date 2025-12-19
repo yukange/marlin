@@ -13,6 +13,7 @@ import { all, createLowlight } from 'lowlight'
 import { Markdown } from 'tiptap-markdown'
 import { getSuggestionOptions } from '@/components/editor/suggestion'
 import { CodeBlockComponent } from '@/components/editor/code-block'
+import { SlashCommand } from '@/components/editor/slash-command'
 
 const lowlight = createLowlight(all)
 
@@ -200,6 +201,9 @@ export function getMarlinExtensions({ placeholder = 'Type a note...', space }: {
         renderHTML({ node }) {
           return ['span', { class: 'mention text-blue-500 font-medium' }, `#${node.attrs.label ?? node.attrs.id}`]
         },
+      }),
+      SlashCommand.configure({
+        space,
       })
     )
   }
