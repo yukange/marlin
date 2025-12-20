@@ -1,5 +1,13 @@
 import type { NextConfig } from "next";
+import withSerwistInit from "@serwist/next";
 import packageJson from "./package.json";
+
+const withSerwist = withSerwistInit({
+  swSrc: "app/sw.ts",
+  swDest: "public/sw.js",
+  // Disable in dev for faster rebuilds
+  disable: process.env.NODE_ENV === "development",
+});
 
 const nextConfig: NextConfig = {
   env: {
@@ -8,7 +16,7 @@ const nextConfig: NextConfig = {
 
   // Cloudflare Pages compatibility
   output: "standalone",
-  
+
   // Disable source maps for production to reduce size and build time
   productionBrowserSourceMaps: false,
 
@@ -19,7 +27,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '2mb',
     },
   },
-  
+
   // Turbopack configuration for markdown files
   turbopack: {
     rules: {
@@ -29,7 +37,7 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  
+
   // Image optimization for Cloudflare
   images: {
     unoptimized: true,
@@ -80,4 +88,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

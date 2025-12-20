@@ -7,14 +7,11 @@ import { Toaster } from "sonner"
 import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context"
 import { useNetworkStatus } from "@/hooks/use-network-status"
 import { useAutoSync } from "@/hooks/use-auto-sync"
+import { SidebarSkeleton } from "@/components/ui/skeletons"
 
 const Sidebar = dynamic(() => import("@/components/layout/sidebar").then(mod => ({ default: mod.Sidebar })), {
   ssr: false,
-  loading: () => (
-    <aside className="pb-12 min-h-screen  dark:bg-zinc-950 backdrop-blur-xl w-[300px] p-[10px]">
-      <div className="h-full w-full animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-900" />
-    </aside>
-  )
+  loading: () => <SidebarSkeleton />
 })
 
 const MobileSidebar = dynamic(() => import("@/components/layout/sidebar").then(mod => ({ default: mod.MobileSidebar })), {
@@ -25,10 +22,10 @@ const queryClient = new QueryClient()
 
 function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const { showNewSpace, setShowNewSpace } = useSidebar()
-  
+
   // Initialize network status monitoring
   useNetworkStatus()
-  
+
   // Initialize background sync engine
   useAutoSync()
 

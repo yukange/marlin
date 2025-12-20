@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# serwist (PWA service worker - generated from app/sw.ts)
+/public/sw.js
+
 # production
 /build
 
