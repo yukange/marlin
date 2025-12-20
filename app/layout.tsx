@@ -48,6 +48,16 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="theme-color" content="#30CF79" />
+        {/* 
+          Blocking script to prevent theme flash (FOUC) 
+          Required for Next.js App Router since next-themes' built-in script injection 
+          relies on next/head which is deprecated in App Router.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `!function(){try{var d=document.documentElement,t=localStorage.getItem('theme');d.classList.toggle('dark',t==='dark'||(!t||t==='system')&&matchMedia('(prefers-color-scheme:dark)').matches)}catch(e){}}()`,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
