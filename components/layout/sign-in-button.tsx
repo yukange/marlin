@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Github, Loader2 } from 'lucide-react'
 import { signIn } from 'next-auth/react'
+import Link from 'next/link'
 
 interface SignInButtonProps {
   variant?: 'default' | 'primary'
@@ -26,27 +27,39 @@ export function SignInButton({ variant = 'default', size = 'sm', children }: Sig
 
   if (variant === 'primary') {
     return (
-      <Button 
-        size={size} 
-        onClick={handleSignIn}
-        disabled={isLoading}
-        className="h-12 px-8 rounded-full text-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20 disabled:opacity-70"
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Connecting to GitHub...
-          </>
-        ) : (
-          children || 'Start Writing for Free'
-        )}
-      </Button>
+      <div className="flex flex-col items-center gap-3">
+        <Button
+          size={size}
+          onClick={handleSignIn}
+          disabled={isLoading}
+          className="h-12 px-8 rounded-full text-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20 disabled:opacity-70"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Connecting to GitHub...
+            </>
+          ) : (
+            children || 'Start Writing for Free'
+          )}
+        </Button>
+        <p className="text-xs text-zinc-500">
+          By signing in, you agree to our{' '}
+          <Link href="/privacy" className="underline hover:text-zinc-300 transition-colors">
+            Privacy Policy
+          </Link>{' '}
+          and{' '}
+          <Link href="/terms" className="underline hover:text-zinc-300 transition-colors">
+            Terms of Service
+          </Link>
+        </p>
+      </div>
     )
   }
 
   return (
-    <Button 
-      size={size} 
+    <Button
+      size={size}
       onClick={handleSignIn}
       disabled={isLoading}
       className="gap-2 rounded-full text-zinc-950 hover:bg-zinc-200 disabled:opacity-70"
