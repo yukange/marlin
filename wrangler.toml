@@ -3,11 +3,17 @@ main = ".open-next/worker.js"
 compatibility_date = "2025-12-22"
 compatibility_flags = ["nodejs_compat"]
 
-[vars]
-# Environment variables will be set via Cloudflare dashboard or CLI
+# ===========================================
+# Public Environment Variables
+# ===========================================
+# These are safe to expose (included in client-side JavaScript)
+# Sensitive secrets are set via: wrangler secret put <NAME>
 
-# For local development
-# Add your GitHub OAuth credentials to .dev.vars file (not committed to git)
+[vars]
+NEXT_PUBLIC_MICROSOFT_CLARITY_ID = "ulwiojsq4k"
+NEXT_PUBLIC_CREEM_PRODUCT_MONTHLY = "prod_4Bn5Yfb8yBJyiyyFU0Qhsk"
+NEXT_PUBLIC_CREEM_PRODUCT_YEARLY = "prod_XZCyAIS8PfLtjhEPMvgk8"
+NEXT_PUBLIC_CREEM_PRODUCT_LIFETIME = "prod_1ky2XSDGumlAnixTdj7uBz"
 
 # KV Namespace for license/Pro status storage
 # Created via: wrangler kv namespace create MARLIN_LICENSE_KV

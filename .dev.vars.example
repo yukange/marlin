@@ -1,16 +1,51 @@
-# NextAuth.js 配置
-AUTH_TRUST_HOST=true
-AUTH_SECRET=your-secret-key-here
-AUTH_GITHUB_ID=your-github-oauth-app-client-id
-AUTH_GITHUB_SECRET=your-github-oauth-app-client-secret
+# ===========================================
+# Marlin Development Environment Variables
+# ===========================================
+# Copy this file to .dev.vars and fill in your values
+# cp .dev.vars.example .dev.vars
+#
+# This file is used by both:
+# - `npm run dev` (Next.js local development)
+# - `wrangler dev` (Cloudflare Workers local development)
+# ===========================================
 
-# 本地开发 URL
+# -------------------------------------------
+# GitHub OAuth (Required)
+# -------------------------------------------
+# Create OAuth App at: https://github.com/settings/developers
+# Homepage URL: http://localhost:3000
+# Callback URL: http://localhost:3000/api/auth/callback/github
+
+AUTH_GITHUB_ID=your-github-oauth-client-id
+AUTH_GITHUB_SECRET=your-github-oauth-client-secret
+
+# -------------------------------------------
+# NextAuth.js (Required)
+# -------------------------------------------
+# Generate a random secret: openssl rand -base64 32
+
+AUTH_SECRET=your-random-secret-key
+AUTH_TRUST_HOST=true
 AUTH_URL=http://localhost:3000
 
-# Analytics
-NEXT_PUBLIC_MICROSOFT_CLARITY_ID=your-clarity-project-id
+# -------------------------------------------
+# Creem Payment (Required for Pro features)
+# -------------------------------------------
+# Get from: https://creem.io/dashboard
+# Use test mode keys for development (prefix: creem_test_)
 
-# Creem 支付集成
-# 从 Creem Dashboard 获取: https://dashboard.creem.io
-CREEM_API_KEY=creem_test_2NOYOHCSgaFXixFTFCEskv
-CREEM_WEBHOOK_SECRET=whsec_4j92BGSVhI245pv9autZ4d
+CREEM_API_KEY=creem_test_your-api-key
+CREEM_WEBHOOK_SECRET=whsec_your-webhook-secret
+
+# -------------------------------------------
+# Optional: Override Product IDs for Testing
+# -------------------------------------------
+# Uncomment to use test products instead of production
+# NEXT_PUBLIC_CREEM_PRODUCT_MONTHLY=prod_test_xxx
+# NEXT_PUBLIC_CREEM_PRODUCT_YEARLY=prod_test_xxx
+# NEXT_PUBLIC_CREEM_PRODUCT_LIFETIME=prod_test_xxx
+
+# -------------------------------------------
+# Optional: Analytics
+# -------------------------------------------
+# NEXT_PUBLIC_MICROSOFT_CLARITY_ID=your-clarity-id
