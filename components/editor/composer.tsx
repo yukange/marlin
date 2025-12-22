@@ -213,7 +213,7 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
             className="h-full flex items-center px-6 cursor-text w-full text-left absolute inset-0 z-10"
             onClick={handleEditorClick}
           >
-            <span className="flex-1 text-sm text-zinc-400 dark:text-zinc-500">Type a note...</span>
+            <span className="text-sm text-zinc-400 dark:text-zinc-500">New note ({shortcutKey}N)</span>
           </button>
         )}
 

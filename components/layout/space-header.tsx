@@ -6,6 +6,7 @@ import { Search, X, Menu } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useSidebar } from '@/components/layout/sidebar-context'
+import { getPlatformKey } from '@/lib/utils'
 
 interface SpaceHeaderProps {
   spaceName: string // Display name without .marlin suffix
@@ -15,7 +16,12 @@ export function SpaceHeader({ spaceName }: SpaceHeaderProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [query, setQuery] = useState('')
+  const [shortcutKey, setShortcutKey] = useState('')
   const { setSidebarOpen, isMobile } = useSidebar()
+
+  useEffect(() => {
+    setShortcutKey(getPlatformKey())
+  }, [])
 
   useEffect(() => {
     const q = searchParams.get('q')
@@ -53,7 +59,7 @@ export function SpaceHeader({ spaceName }: SpaceHeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-10 backdrop-blur-xl dark:bg-zinc-950/70 px-6 py-4 border-b border-transparent dark:border-zinc-800/50">
+    <header className="sticky top-0 z-10 backdrop-blur-xl dark:bg-zinc-950/70 px-6 py-3">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           {isMobile && (
@@ -73,7 +79,7 @@ export function SpaceHeader({ spaceName }: SpaceHeaderProps) {
           <Input
             id="search-input"
             type="text"
-            placeholder="Search or #tag"
+            placeholder={`Search (${shortcutKey}K)`}
             value={query}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-10 pr-9 h-9 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 focus-visible:ring-zinc-300 dark:focus-visible:ring-zinc-600 text-sm"

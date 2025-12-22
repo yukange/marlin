@@ -146,7 +146,7 @@ export function UserNav() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-auto w-full justify-start p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+          <Button variant="ghost" className="h-auto w-full justify-start p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus-visible:ring-0 focus-visible:ring-offset-0">
             <div className="relative">
               <Avatar className="h-10 w-10 rounded-md">
                 <AvatarImage src={sessionUser?.image || ""} alt={sessionUser?.name || ""} />
@@ -171,7 +171,7 @@ export function UserNav() {
             </div>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-full" align="start" forceMount>
+        <DropdownMenuContent className="min-w-[280px]" align="start" forceMount>
           <Tabs value={theme} onValueChange={setTheme} className="w-full px-1 py-1">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger
@@ -229,7 +229,7 @@ export function UserNav() {
               <DropdownMenuSeparator className="my-1" />
             </>
           )}
-          {isPro && (
+          {isPro ? (
             <>
               <DropdownMenuItem asChild className="cursor-pointer mx-1 my-1">
                 <a
@@ -241,6 +241,16 @@ export function UserNav() {
                   <Crown className="mr-2 h-4 w-4 text-amber-500" />
                   Manage Subscription
                 </a>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="my-1" />
+            </>
+          ) : (
+            <>
+              <DropdownMenuItem asChild className="cursor-pointer mx-1 my-1">
+                <Link href="/pricing" className="flex items-center">
+                  <Crown className="mr-2 h-4 w-4 text-amber-500" />
+                  Upgrade to Pro
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="my-1" />
             </>

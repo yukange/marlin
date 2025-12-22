@@ -116,21 +116,25 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
 }
 
 .composer-scroll-area {
-  overflow-y: hidden;
-  transition-property: overflow-y;
-  transition-duration: 0s;
-  transition-delay: 0s;
+  overflow-y: hidden !important;
 }
 
+/* Only allow scroll after expand animation completes (300ms) */
 .composer-scroll-area[data-expanded="true"] {
-  overflow-y: auto;
-  transition-delay: 300ms;
+  animation: enable-scroll 0s 320ms forwards;
+}
+
+@keyframes enable-scroll {
+  to {
+    overflow-y: auto !important;
+  }
 }
 
 /* iOS Safari input fixes */
