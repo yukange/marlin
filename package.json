@@ -14,6 +14,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
   },
   "dependencies": {
+    "@creem_io/nextjs": "^0.4.0",
     "@microsoft/clarity": "^1.0.2",
     "@opennextjs/cloudflare": "^1.11.0",
     "@radix-ui/react-avatar": "^1.1.11",
@@ -43,6 +44,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "creem_io": "^0.4.0",
     "date-fns": "^4.1.0",
     "dexie": "^4.2.1",
     "dexie-react-hooks": "^4.2.0",

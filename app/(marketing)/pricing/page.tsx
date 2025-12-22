@@ -4,14 +4,29 @@ import { Check, Zap, Infinity, Github, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
+import { CreemCheckout } from "@creem_io/nextjs"
+
+/**
+ * Creem Product IDs
+ * These should match the products created in Creem Dashboard
+ */
+const PRODUCT_IDS = {
+  monthly: process.env.NEXT_PUBLIC_CREEM_PRODUCT_MONTHLY || "prod_pro_monthly",
+  yearly: process.env.NEXT_PUBLIC_CREEM_PRODUCT_YEARLY || "prod_pro_yearly",
+  lifetime: process.env.NEXT_PUBLIC_CREEM_PRODUCT_LIFETIME || "prod_pro_lifetime",
+} as const
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly")
+  const { data: session, status } = useSession()
 
   const handleAuth = () => {
-    signIn('github', { callbackUrl: '/app' })
+    signIn('github', { callbackUrl: '/pricing' })
   }
+
+  const isLoading = status === "loading"
+  const isAuthenticated = !!session?.user
 
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 pt-24 pb-16">
@@ -23,10 +38,10 @@ export default function PricingPage() {
             <span className="text-[#30CF79]">lifetime ownership.</span>
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400">
-            Marlin is local-first and GitHub-native. No hidden servers, no data lock-in. 
+            Marlin is local-first and GitHub-native. No hidden servers, no data lock-in.
             Choose the plan that fits your workflow.
           </p>
-          
+
           <div className="mt-8 flex items-center justify-center gap-2">
             <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/40 px-3 py-1 text-sm font-medium text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
               Public Beta: All features free for early adopters
@@ -67,15 +82,15 @@ export default function PricingPage() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Pro Subscription</h3>
               </div>
-              
+
               {/* Internal Toggle */}
               <div className="flex items-center gap-3 mb-6 bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-lg w-fit">
                 <button
                   onClick={() => setBillingCycle("monthly")}
                   className={cn(
                     "text-xs font-medium px-3 py-1.5 rounded-md transition-all",
-                    billingCycle === "monthly" 
-                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm" 
+                    billingCycle === "monthly"
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
                       : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                   )}
                 >
@@ -85,8 +100,8 @@ export default function PricingPage() {
                   onClick={() => setBillingCycle("yearly")}
                   className={cn(
                     "text-xs font-medium px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5",
-                    billingCycle === "yearly" 
-                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm" 
+                    billingCycle === "yearly"
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
                       : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                   )}
                 >
@@ -116,17 +131,23 @@ export default function PricingPage() {
               <PricingFeature text="Early Access to Features" isPro />
             </ul>
 
-            <Button className="w-full rounded-xl h-12 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200" onClick={handleAuth}>
-              Join Beta (Free)
-            </Button>
+            <PurchaseButton
+              productId={billingCycle === "monthly" ? PRODUCT_IDS.monthly : PRODUCT_IDS.yearly}
+              isAuthenticated={isAuthenticated}
+              isLoading={isLoading}
+              onAuth={handleAuth}
+              userId={session?.user?.id}
+              variant="default"
+              label="Join Beta (Free)"
+            />
           </div>
 
           {/* Pro Lifetime */}
           <div className="flex flex-col rounded-3xl border-2 border-[#30CF79] p-8 bg-white dark:bg-zinc-900 relative overflow-hidden transition-all shadow-[0_0_40px_-10px_rgba(48,207,121,0.2)]">
             <div className="absolute top-0 right-0">
-                <div className="bg-[#30CF79] text-white text-[10px] font-bold px-4 py-1 rotate-45 translate-x-[24px] translate-y-[10px] w-[100px] text-center uppercase tracking-widest">
-                    Best Value
-                </div>
+              <div className="bg-[#30CF79] text-white text-[10px] font-bold px-4 py-1 rotate-45 translate-x-[24px] translate-y-[10px] w-[100px] text-center uppercase tracking-widest">
+                Best Value
+              </div>
             </div>
 
             <div className="mb-8">
@@ -150,9 +171,15 @@ export default function PricingPage() {
               <PricingFeature text="Badge in Profile" isPro />
             </ul>
 
-            <Button className="w-full rounded-xl h-12 bg-[#30CF79] hover:bg-[#2BC06E] text-white border-0" onClick={handleAuth}>
-              Buy Lifetime
-            </Button>
+            <PurchaseButton
+              productId={PRODUCT_IDS.lifetime}
+              isAuthenticated={isAuthenticated}
+              isLoading={isLoading}
+              onAuth={handleAuth}
+              userId={session?.user?.id}
+              variant="lifetime"
+              label="Buy Lifetime"
+            />
           </div>
         </div>
 
@@ -209,9 +236,9 @@ export default function PricingPage() {
 
         {/* Footer Note */}
         <div className="mt-24 text-center border-t border-zinc-100 dark:border-zinc-800 pt-8">
-           <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-             Have questions? <a href="https://github.com/marlin" className="underline hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Visit our GitHub Discussions</a>
-           </p>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm">
+            Have questions? <a href="https://github.com/marlin" className="underline hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Visit our GitHub Discussions</a>
+          </p>
         </div>
       </div>
     </div>
@@ -229,5 +256,79 @@ function PricingFeature({ text, isPro = false }: { text: string, isPro?: boolean
       </div>
       <span className="text-zinc-600 dark:text-zinc-400">{text}</span>
     </li>
+  )
+}
+
+interface PurchaseButtonProps {
+  productId: string
+  isAuthenticated: boolean
+  isLoading: boolean
+  onAuth: () => void
+  userId?: string
+  variant: "default" | "lifetime"
+  label: string
+}
+
+function PurchaseButton({
+  productId,
+  isAuthenticated,
+  isLoading,
+  onAuth,
+  userId,
+  variant,
+  label,
+}: PurchaseButtonProps) {
+  // 加载中状态
+  if (isLoading) {
+    return (
+      <Button
+        className={cn(
+          "w-full rounded-xl h-12",
+          variant === "lifetime"
+            ? "bg-[#30CF79] hover:bg-[#2BC06E] text-white border-0"
+            : "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200"
+        )}
+        disabled
+      >
+        Loading...
+      </Button>
+    )
+  }
+
+  // 未登录：显示登录按钮
+  if (!isAuthenticated) {
+    return (
+      <Button
+        className={cn(
+          "w-full rounded-xl h-12",
+          variant === "lifetime"
+            ? "bg-[#30CF79] hover:bg-[#2BC06E] text-white border-0"
+            : "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200"
+        )}
+        onClick={onAuth}
+      >
+        Sign in to {label}
+      </Button>
+    )
+  }
+
+  // 已登录：使用 CreemCheckout 组件
+  return (
+    <CreemCheckout
+      productId={productId}
+      successUrl="/app?upgraded=1"
+      referenceId={userId}
+    >
+      <Button
+        className={cn(
+          "w-full rounded-xl h-12",
+          variant === "lifetime"
+            ? "bg-[#30CF79] hover:bg-[#2BC06E] text-white border-0"
+            : "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200"
+        )}
+      >
+        {label}
+      </Button>
+    </CreemCheckout>
   )
 }

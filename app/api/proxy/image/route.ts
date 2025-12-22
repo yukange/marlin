@@ -13,7 +13,9 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const { content, filename, space, userLogin } = await req.json()
+        const { content, filename, space, userLogin } = await req.json() as {
+            content?: string; filename?: string; space?: string; userLogin?: string
+        }
 
         if (!content || !filename || !space || !userLogin) {
             return new NextResponse("Missing required fields", { status: 400 })

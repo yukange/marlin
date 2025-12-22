@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { content, title } = await req.json()
-    
+    const { content, title } = await req.json() as { content?: string; title?: string }
+
     if (!content) {
       return new NextResponse("Content is required", { status: 400 })
     }
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: any) {
     console.error("Gist creation failed:", error.response?.data || error.message || error)
-    return new NextResponse(JSON.stringify(error.response?.data || { message: "Failed to create Gist" }), { 
+    return new NextResponse(JSON.stringify(error.response?.data || { message: "Failed to create Gist" }), {
       status: error.status || 500,
       headers: { 'Content-Type': 'application/json' }
     })

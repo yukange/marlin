@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog"
 import { useSession, signOut, signIn } from "next-auth/react"
 import { useTheme } from "next-themes"
-import { Monitor, Sun, Moon, LogOut, Shield, RefreshCw, AlertCircle, Loader2 } from "lucide-react"
+import { Monitor, Sun, Moon, LogOut, Shield, RefreshCw, AlertCircle, Loader2, Crown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useState } from "react"
@@ -37,6 +37,7 @@ import { useStore } from "@/lib/store"
 import { syncWorkspace } from "@/lib/services/sync-service"
 import { useGitHubUser } from "@/hooks/use-github-user"
 import { toast } from "sonner"
+import { useLicense } from "@/hooks/use-license"
 
 export function UserNav() {
   const { data: session } = useSession()
@@ -47,6 +48,7 @@ export function UserNav() {
   const [showLogoutAlert, setShowLogoutAlert] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const version = process.env.NEXT_PUBLIC_APP_VERSION;
+  const { isPro } = useLicense()
 
   const isSyncing = currentSpace ? spacesSyncState[currentSpace] === 'syncing' : false
 
@@ -54,19 +56,19 @@ export function UserNav() {
   const statusColor = isUnauthorized
     ? 'bg-red-500'
     : {
-        offline: 'bg-zinc-400',
-        limited: 'bg-amber-500',
-        online: 'bg-emerald-500',
-      }[networkStatus]
+      offline: 'bg-zinc-400',
+      limited: 'bg-amber-500',
+      online: 'bg-emerald-500',
+    }[networkStatus]
 
   // Determine status text color (matches dot color)
   const statusTextColor = isUnauthorized
     ? 'text-red-500'
     : {
-        offline: 'text-zinc-400',
-        limited: 'text-amber-500',
-        online: 'text-emerald-500',
-      }[networkStatus]
+      offline: 'text-zinc-400',
+      limited: 'text-amber-500',
+      online: 'text-emerald-500',
+    }[networkStatus]
 
   // Determine status text for footer
   const getStatusText = () => {
@@ -156,7 +158,15 @@ export function UserNav() {
               )} />
             </div>
             <div className="ml-3 flex flex-col items-start text-left">
-              <span className="text-sm font-medium leading-none">{sessionUser?.name}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium leading-none">{sessionUser?.name}</span>
+                {isPro && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                    <Crown className="h-2.5 w-2.5" />
+                    PRO
+                  </span>
+                )}
+              </div>
               <span className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{sessionUser?.email}</span>
             </div>
           </Button>
@@ -219,6 +229,22 @@ export function UserNav() {
               <DropdownMenuSeparator className="my-1" />
             </>
           )}
+          {isPro && (
+            <>
+              <DropdownMenuItem asChild className="cursor-pointer mx-1 my-1">
+                <a
+                  href="https://creem.io/portal"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center"
+                >
+                  <Crown className="mr-2 h-4 w-4 text-amber-500" />
+                  Manage Subscription
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="my-1" />
+            </>
+          )}
           <DropdownMenuItem asChild className="cursor-pointer mx-1 my-1">
             <Link href="/privacy" className="flex items-center">
               <Shield className="mr-2 h-4 w-4 text-zinc-500" />
@@ -250,9 +276,9 @@ export function UserNav() {
           </DropdownMenuItem>
           <footer className="mt-2 px-2 py-2 border-t border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center justify-between gap-2">
-              <a 
-                href="https://github.com/yukange/marlin/releases" 
-                target="_blank" 
+              <a
+                href="https://github.com/yukange/marlin/releases"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
               >

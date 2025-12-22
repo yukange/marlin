@@ -4,7 +4,8 @@
  * Responsibilities:
  * - Fetch authenticated user profile
  * - Check API rate limits
- * - Future: License validation (Pro status)
+ * 
+ * Note: License validation has been moved to license-service.ts
  * 
  * Depends on:
  * - lib/client/github-api.ts
@@ -65,20 +66,4 @@ export async function isAuthenticated(): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/**
- * Future: Check license status (Pro/Free)
- * 
- * This will integrate with Cloudflare KV or external license validation service.
- * For now, returns placeholder.
- */
-export async function checkLicenseStatus(): Promise<{
-  isPro: boolean;
-  expiresAt?: number;
-}> {
-  // TODO: Implement license checking via Cloudflare KV
-  return {
-    isPro: false,
-  };
 }

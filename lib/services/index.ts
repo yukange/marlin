@@ -10,7 +10,6 @@ export {
   getUserProfile,
   getRateLimit,
   isAuthenticated,
-  checkLicenseStatus,
 } from './auth-service';
 export type { GitHubUser, RateLimit } from './auth-service';
 

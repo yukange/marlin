@@ -23,8 +23,10 @@ export async function GET(req: NextRequest) {
       throw new Error(`GitHub API error: ${response.status}`)
     }
 
-    const data = await response.json()
-    
+    const data = await response.json() as {
+      resources: { core: { limit: number; remaining: number; reset: number } }
+    }
+
     // Only return core data to reduce transmission
     return NextResponse.json({
       limit: data.resources.core.limit,

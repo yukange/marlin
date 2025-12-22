@@ -9,6 +9,9 @@ interface RateLimitInfo {
   reset: number
 }
 
+/** Pro plan types */
+export type ProPlan = 'monthly' | 'yearly' | 'lifetime'
+
 interface MarlinState {
   currentSpace: string | null
   lastActiveSpace: string | null
@@ -19,6 +22,8 @@ interface MarlinState {
   isUnauthorized: boolean
   isPro: boolean
   isBeta: boolean // Public beta: PRO features available but show badges
+  proValidatedAt: number | null // Unix timestamp of last Pro status validation
+  proPlan: ProPlan | undefined // Current Pro plan type
   setCurrentSpace: (space: string) => void
   setLastActiveSpace: (space: string) => void
   setSyncStatus: (status: 'synced' | 'syncing' | 'error') => void
@@ -28,6 +33,7 @@ interface MarlinState {
   setIsUnauthorized: (isUnauthorized: boolean) => void
   setIsPro: (isPro: boolean) => void
   setIsBeta: (isBeta: boolean) => void
+  setProStatus: (isPro: boolean, validatedAt: number, plan?: ProPlan) => void
 }
 
 export const useStore = create<MarlinState>()(
@@ -41,7 +47,9 @@ export const useStore = create<MarlinState>()(
       rateLimitInfo: null,
       isUnauthorized: false,
       isPro: false, // Default to false (non-PRO)
-      isBeta: true, // Public beta: allows PRO features for all users
+      isBeta: false, // Public beta: allows PRO features for all users
+      proValidatedAt: null, // Never validated
+      proPlan: undefined, // No plan
       setCurrentSpace: (space) => {
         set({ currentSpace: space, lastActiveSpace: space })
       },
@@ -56,6 +64,8 @@ export const useStore = create<MarlinState>()(
       setIsUnauthorized: (isUnauthorized) => set({ isUnauthorized }),
       setIsPro: (isPro) => set({ isPro }),
       setIsBeta: (isBeta) => set({ isBeta }),
+      setProStatus: (isPro, validatedAt, plan) =>
+        set({ isPro, proValidatedAt: validatedAt, proPlan: plan }),
     }),
     {
       name: 'marlin-storage',

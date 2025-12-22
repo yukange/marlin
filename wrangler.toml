@@ -1,6 +1,6 @@
 name = "marlin"
 main = ".open-next/worker.js"
-compatibility_date = "2025-12-03"
+compatibility_date = "2025-12-22"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
@@ -8,6 +8,13 @@ compatibility_flags = ["nodejs_compat"]
 
 # For local development
 # Add your GitHub OAuth credentials to .dev.vars file (not committed to git)
+
+# KV Namespace for license/Pro status storage
+# Created via: wrangler kv namespace create MARLIN_LICENSE_KV
+[[kv_namespaces]]
+binding = "MARLIN_LICENSE_KV"
+id = "f5d3f175c0464b07a3ddccd51bfb3ef1"
+preview_id = "a48590f1f94b4f0f8b67008651640a2c"
 
 [dev]
 port = 3000

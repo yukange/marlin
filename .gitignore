@@ -43,6 +43,7 @@ yarn-error.log*
 .wrangler
 .dev.vars
 .open-next
+worker-configuration.d.ts
 
 # typescript
 *.tsbuildinfo

@@ -9,3 +9,8 @@ AUTH_URL=http://localhost:3000
 
 # Analytics
 NEXT_PUBLIC_MICROSOFT_CLARITY_ID=your-clarity-project-id
+
+# Creem 支付集成
+# 从 Creem Dashboard 获取: https://dashboard.creem.io
+CREEM_API_KEY=creem_test_2NOYOHCSgaFXixFTFCEskv
+CREEM_WEBHOOK_SECRET=whsec_4j92BGSVhI245pv9autZ4d
