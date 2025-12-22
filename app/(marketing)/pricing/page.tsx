@@ -41,12 +41,6 @@ export default function PricingPage() {
             Marlin is local-first and GitHub-native. No hidden servers, no data lock-in.
             Choose the plan that fits your workflow.
           </p>
-
-          <div className="mt-8 flex items-center justify-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/40 px-3 py-1 text-sm font-medium text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-              Public Beta: All features free for early adopters
-            </span>
-          </div>
         </div>
 
         {/* Pricing Cards */}
@@ -138,7 +132,7 @@ export default function PricingPage() {
               onAuth={handleAuth}
               userId={session?.user?.id}
               variant="default"
-              label="Join Beta (Free)"
+              label="Subscribe"
             />
           </div>
 

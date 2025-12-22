@@ -7,7 +7,6 @@
  * - Periodic validation (every 10 minutes)
  * - Local caching of Pro status
  * - Graceful fallback on network errors
- * - Beta mode bypass
  *
  * Usage:
  * ```tsx
@@ -46,7 +45,7 @@ interface LicenseResponse {
  * Hook return type
  */
 interface UseLicenseResult {
-    /** Whether the user has Pro access (includes beta mode) */
+    /** Whether the user has Pro access */
     isPro: boolean
     /** The specific plan type if Pro */
     plan?: 'monthly' | 'yearly' | 'lifetime'
@@ -62,13 +61,11 @@ interface UseLicenseResult {
  * Hook for managing license validation
  *
  * Automatically validates the user's license on mount and periodically.
- * During beta, all users get Pro access.
  */
 export function useLicense(): UseLicenseResult {
     const { data: session, status } = useSession()
     const {
         isPro,
-        isBeta,
         proValidatedAt,
         proPlan,
         setProStatus,
@@ -81,9 +78,6 @@ export function useLicense(): UseLicenseResult {
      * Check if validation is needed based on last validation time
      */
     const shouldValidate = useCallback(() => {
-        // Skip validation during beta - everyone gets Pro
-        if (isBeta) return false
-
         // Skip if not authenticated
         if (status !== 'authenticated' || !session?.user?.id) return false
 
@@ -93,7 +87,7 @@ export function useLicense(): UseLicenseResult {
         // Check if enough time has passed
         const timeSinceLastValidation = Date.now() - proValidatedAt
         return timeSinceLastValidation > VALIDATION_INTERVAL
-    }, [isBeta, status, session?.user?.id, proValidatedAt])
+    }, [status, session?.user?.id, proValidatedAt])
 
     /**
      * Perform license validation
@@ -137,9 +131,6 @@ export function useLicense(): UseLicenseResult {
      * Effect: Initial validation and periodic checks
      */
     useEffect(() => {
-        // Skip during beta
-        if (isBeta) return
-
         // Skip if not authenticated
         if (status !== 'authenticated') return
 
@@ -156,7 +147,7 @@ export function useLicense(): UseLicenseResult {
         }, VALIDATION_INTERVAL)
 
         return () => clearInterval(interval)
-    }, [isBeta, status, shouldValidate, validate])
+    }, [status, shouldValidate, validate])
 
     /**
      * Effect: Re-validate when window regains focus (tab switch)
@@ -173,8 +164,7 @@ export function useLicense(): UseLicenseResult {
     }, [shouldValidate, validate])
 
     return {
-        // During beta, everyone gets Pro
-        isPro: isBeta || isPro,
+        isPro,
         plan: proPlan,
         isValidating,
         error,

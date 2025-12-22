@@ -22,7 +22,6 @@ interface ComposerProps {
 export function Composer({ space, initialContent, editingNoteId, onComplete }: ComposerProps) {
   const openDialog = useConfirmDialogStore((state) => state.openDialog)
   const isPro = useStore((state) => state.isPro)
-  const isBeta = useStore((state) => state.isBeta)
   const [shortcutKey, setShortcutKey] = useState('')
 
   useEffect(() => {
@@ -73,8 +72,7 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
 
   // Insert image as base64 immediately (no network request)
   const handleImageUpload = useCallback(async (file: File) => {
-    // Allow if PRO or during Beta
-    if (!isPro && !isBeta) {
+    if (!isPro) {
       toast.error('Image upload is a PRO feature')
       return
     }
@@ -82,7 +80,7 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
     if (dataUrl) {
       editor?.chain().focus().setImage({ src: dataUrl }).run()
     }
-  }, [insertLocalImage, editor, isPro, isBeta])
+  }, [insertLocalImage, editor, isPro])
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -310,8 +308,7 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
                 size="sm"
                 pressed={false}
                 onPressedChange={() => {
-                  // Allow if PRO or during Beta
-                  if (!isPro && !isBeta) {
+                  if (!isPro) {
                     toast.error('Image upload is a PRO feature')
                     return
                   }
@@ -330,7 +327,7 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
               <TemplatePicker
                 space={space}
                 onSelect={(content) => {
-                  if (!isPro && !isBeta) {
+                  if (!isPro) {
                     toast.error('Templates are a PRO feature')
                     return
                   }

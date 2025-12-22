@@ -21,7 +21,6 @@ interface MarlinState {
   rateLimitInfo: RateLimitInfo | null
   isUnauthorized: boolean
   isPro: boolean
-  isBeta: boolean // Public beta: PRO features available but show badges
   proValidatedAt: number | null // Unix timestamp of last Pro status validation
   proPlan: ProPlan | undefined // Current Pro plan type
   setCurrentSpace: (space: string) => void
@@ -32,7 +31,6 @@ interface MarlinState {
   setRateLimitInfo: (info: RateLimitInfo | null) => void
   setIsUnauthorized: (isUnauthorized: boolean) => void
   setIsPro: (isPro: boolean) => void
-  setIsBeta: (isBeta: boolean) => void
   setProStatus: (isPro: boolean, validatedAt: number, plan?: ProPlan) => void
 }
 
@@ -46,9 +44,8 @@ export const useStore = create<MarlinState>()(
       networkStatus: 'online',
       rateLimitInfo: null,
       isUnauthorized: false,
-      isPro: false, // Default to false (non-PRO)
-      isBeta: false, // Public beta: allows PRO features for all users
-      proValidatedAt: null, // Never validated
+      isPro: false,
+      proValidatedAt: null,
       proPlan: undefined, // No plan
       setCurrentSpace: (space) => {
         set({ currentSpace: space, lastActiveSpace: space })
@@ -63,7 +60,6 @@ export const useStore = create<MarlinState>()(
       setRateLimitInfo: (info) => set({ rateLimitInfo: info }),
       setIsUnauthorized: (isUnauthorized) => set({ isUnauthorized }),
       setIsPro: (isPro) => set({ isPro }),
-      setIsBeta: (isBeta) => set({ isBeta }),
       setProStatus: (isPro, validatedAt, plan) =>
         set({ isPro, proValidatedAt: validatedAt, proPlan: plan }),
     }),

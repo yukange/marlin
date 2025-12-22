@@ -97,27 +97,22 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
               priority
             />
             <div className="flex items-center gap-2">
-              <div className="relative">
-                <Image
-                  src="/text-logo-light.svg"
-                  alt="Marlin"
-                  width={80}
-                  height={24}
-                  className="hidden dark:block"
-                  priority
-                />
-                <Image
-                  src="/text-logo-dark.svg"
-                  alt="Marlin"
-                  width={80}
-                  height={24}
-                  className="block dark:hidden"
-                  priority
-                />
-              </div>
-              <span className="rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 tracking-wide uppercase">
-                Beta
-              </span>
+              <Image
+                src="/text-logo-light.svg"
+                alt="Marlin"
+                width={80}
+                height={24}
+                className="hidden dark:block"
+                priority
+              />
+              <Image
+                src="/text-logo-dark.svg"
+                alt="Marlin"
+                width={80}
+                height={24}
+                className="block dark:hidden"
+                priority
+              />
             </div>
           </div>
           <SpaceSwitcher />
