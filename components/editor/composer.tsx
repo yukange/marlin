@@ -6,10 +6,9 @@ import { Toggle } from '@/components/ui/toggle'
 import { Bold, Italic, Strikethrough, Code, List, ListOrdered, CheckSquare, ImageIcon } from 'lucide-react'
 import { useMarlinEditor, useComposerState, useComposerShortcuts, useComposerSubmit, useImageUpload } from '@/hooks/use-composer'
 import { useConfirmDialogStore } from '@/hooks/use-confirm-dialog'
-import { useStore } from '@/lib/store'
+import { useProGate } from '@/hooks/use-pro-gate'
 import { cn, getPlatformKey } from '@/lib/utils'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { toast } from 'sonner'
 import { TemplatePicker } from './template-picker'
 
 interface ComposerProps {
@@ -21,7 +20,7 @@ interface ComposerProps {
 
 export function Composer({ space, initialContent, editingNoteId, onComplete }: ComposerProps) {
   const openDialog = useConfirmDialogStore((state) => state.openDialog)
-  const isPro = useStore((state) => state.isPro)
+  const { isPro, requirePro } = useProGate()
   const [shortcutKey, setShortcutKey] = useState('')
 
   useEffect(() => {
@@ -73,14 +72,14 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
   // Insert image as base64 immediately (no network request)
   const handleImageUpload = useCallback(async (file: File) => {
     if (!isPro) {
-      toast.error('Image upload is a PRO feature')
+      requirePro(() => { })
       return
     }
     const dataUrl = await insertLocalImage(file)
     if (dataUrl) {
       editor?.chain().focus().setImage({ src: dataUrl }).run()
     }
-  }, [insertLocalImage, editor, isPro])
+  }, [insertLocalImage, editor, isPro, requirePro])
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -308,11 +307,9 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
                 size="sm"
                 pressed={false}
                 onPressedChange={() => {
-                  if (!isPro) {
-                    toast.error('Image upload is a PRO feature')
-                    return
-                  }
-                  fileInputRef.current?.click()
+                  requirePro(() => {
+                    fileInputRef.current?.click()
+                  })
                 }}
                 disabled={!editor}
                 className="h-8 w-8 relative"
@@ -327,14 +324,12 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
               <TemplatePicker
                 space={space}
                 onSelect={(content) => {
-                  if (!isPro) {
-                    toast.error('Templates are a PRO feature')
-                    return
-                  }
-                  // Ensure composer stays expanded and insert template
-                  expand()
-                  requestAnimationFrame(() => {
-                    insertTemplate(content)
+                  requirePro(() => {
+                    // Ensure composer stays expanded and insert template
+                    expand()
+                    requestAnimationFrame(() => {
+                      insertTemplate(content)
+                    })
                   })
                 }}
                 disabled={!editor}

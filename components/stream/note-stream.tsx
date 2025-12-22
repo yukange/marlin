@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useGitHubUser } from '@/hooks/use-github-user'
-import { useStore } from '@/lib/store'
+import { useProGate } from '@/hooks/use-pro-gate'
 import { cn } from '@/lib/utils'
 import { spaceToRepo } from '@/lib/services'
 import { NoteContent } from './note-content'
@@ -53,7 +53,7 @@ function NoteCard({
   isInTrash
 }: NoteCardProps) {
   const { data: user } = useGitHubUser()
-  const isPro = useStore((state) => state.isPro)
+  const { isPro, requirePro } = useProGate()
   const [isExpanded, setIsExpanded] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const [fullHeight, setFullHeight] = useState<number>(0)
@@ -246,7 +246,7 @@ function NoteCard({
                     <Edit className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleShare}>
+                  <DropdownMenuItem onClick={() => requirePro(handleShare)}>
                     <Globe className="mr-2 h-4 w-4" />
                     Share to Web
                     {!isPro && (
@@ -259,9 +259,14 @@ function NoteCard({
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open in GitHub
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onToggleTemplate?.(note)}>
+                  <DropdownMenuItem onClick={() => requirePro(() => onToggleTemplate?.(note))}>
                     <FileText className="mr-2 h-4 w-4" />
                     {note.isTemplate ? 'Unmark Template' : 'Mark as Template'}
+                    {!isPro && (
+                      <span className="ml-2 rounded-[4px] bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 tracking-wider leading-none">
+                        PRO
+                      </span>
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

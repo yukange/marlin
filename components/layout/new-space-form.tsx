@@ -10,7 +10,8 @@ import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { useStore } from "@/lib/store"
+import { useProGate } from "@/hooks/use-pro-gate"
+import { useSpaces } from "@/hooks/use-spaces"
 
 interface NewSpaceFormProps {
   onCancel?: () => void
@@ -23,7 +24,11 @@ export function NewSpaceForm({ onCancel, onSuccess }: NewSpaceFormProps) {
   const [isPrivate, setIsPrivate] = React.useState(true)
 
   const router = useRouter()
-  const isPro = useStore((state) => state.isPro)
+  const { isPro, requirePro } = useProGate()
+  const { spaces } = useSpaces()
+
+  // Check if user has reached space limit (free users: 1 space)
+  const hasReachedLimit = !isPro && (spaces?.length ?? 0) >= 1
 
   const validation = React.useMemo(() => validateSpaceName(name), [name])
 
@@ -59,9 +64,15 @@ export function NewSpaceForm({ onCancel, onSuccess }: NewSpaceFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (name.trim()) {
-      createSpaceMutation.mutate()
+    if (!name.trim()) return
+
+    // Check space limit before creating
+    if (hasReachedLimit) {
+      requirePro(() => { })
+      return
     }
+
+    createSpaceMutation.mutate()
   }
 
   return (
@@ -198,7 +209,7 @@ export function NewSpaceForm({ onCancel, onSuccess }: NewSpaceFormProps) {
         <footer className="border-t dark:border-zinc-800 px-6 py-4  dark:bg-zinc-950 flex flex-col gap-2">
           <Button
             type="submit"
-            disabled={!name.trim() || !validation.valid || createSpaceMutation.isPending}
+            disabled={!name.trim() || !validation.valid || createSpaceMutation.isPending || hasReachedLimit}
             className="w-full rounded-lg bg-[#30CF79] hover:bg-[#2BC06E] text-white border-0"
           >
             {createSpaceMutation.isPending ? (

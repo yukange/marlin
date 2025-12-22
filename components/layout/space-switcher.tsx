@@ -36,6 +36,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useStore } from "@/lib/store"
+import { useProGate } from "@/hooks/use-pro-gate"
 import { useRouter, useParams } from "next/navigation"
 import { useSidebar } from "@/components/layout/sidebar-context"
 import { useSpaces } from "@/hooks/use-spaces"
@@ -53,7 +54,8 @@ export function SpaceSwitcher() {
 
   const router = useRouter()
   const params = useParams()
-  const { setCurrentSpace, isPro } = useStore()
+  const { setCurrentSpace } = useStore()
+  const { isPro, requirePro } = useProGate()
   const { data: user } = useGitHubUser()
 
   const currentSpaceName = params.space as string
@@ -199,7 +201,12 @@ export function SpaceSwitcher() {
                 <CommandItem
                   onSelect={() => {
                     setOpen(false)
-                    setShowNewSpace(true)
+                    // Free users can only have 1 space
+                    if (!isPro && spacesList.length >= 1) {
+                      requirePro(() => setShowNewSpace(true))
+                    } else {
+                      setShowNewSpace(true)
+                    }
                   }}
                   className="flex items-center justify-between"
                 >
