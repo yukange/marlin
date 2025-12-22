@@ -4,16 +4,14 @@ compatibility_date = "2025-12-22"
 compatibility_flags = ["nodejs_compat"]
 
 # ===========================================
-# Public Environment Variables
+# Environment Variables
 # ===========================================
-# These are safe to expose (included in client-side JavaScript)
-# Sensitive secrets are set via: wrangler secret put <NAME>
+# NEXT_PUBLIC_* variables: Set in Cloudflare Build Environment Variables (not here)
+# Sensitive secrets: Set via `wrangler secret put <NAME>`
+# Runtime variables (non-NEXT_PUBLIC): Can be set here in [vars]
 
 [vars]
-NEXT_PUBLIC_MICROSOFT_CLARITY_ID = "ulwiojsq4k"
-NEXT_PUBLIC_CREEM_PRODUCT_MONTHLY = "prod_4Bn5Yfb8yBJyiyyFU0Qhsk"
-NEXT_PUBLIC_CREEM_PRODUCT_YEARLY = "prod_XZCyAIS8PfLtjhEPMvgk8"
-NEXT_PUBLIC_CREEM_PRODUCT_LIFETIME = "prod_1ky2XSDGumlAnixTdj7uBz"
+# Currently no runtime-only variables needed
 
 # KV Namespace for license/Pro status storage
 # Created via: wrangler kv namespace create MARLIN_LICENSE_KV
