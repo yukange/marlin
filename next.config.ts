@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
 import packageJson from "./package.json";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+
+// Initialize Cloudflare bindings for local development
+initOpenNextCloudflareForDev();
 
 const withSerwist = withSerwistInit({
   swSrc: "app/sw.ts",

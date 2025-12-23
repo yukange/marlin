@@ -211,7 +211,7 @@ function NoteCard({
                 <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuContent align="start" className="w-56">
               {/* Error Retry */}
               {syncStatus === 'error' && (
                 <>
@@ -246,11 +246,11 @@ function NoteCard({
                     <Edit className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => requirePro(handleShare)}>
-                    <Globe className="mr-2 h-4 w-4" />
-                    Share to Web
+                  <DropdownMenuItem onClick={() => requirePro(handleShare)} className="flex items-center">
+                    <Globe className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="flex-1">Share to Web</span>
                     {!isPro && (
-                      <span className="ml-2 rounded-[4px] bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 tracking-wider leading-none">
+                      <span className="ml-1.5 rounded bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 text-[8px] font-bold text-amber-600 dark:text-amber-400 leading-none">
                         PRO
                       </span>
                     )}
@@ -259,11 +259,11 @@ function NoteCard({
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open in GitHub
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => requirePro(() => onToggleTemplate?.(note))}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    {note.isTemplate ? 'Unmark Template' : 'Mark as Template'}
+                  <DropdownMenuItem onClick={() => requirePro(() => onToggleTemplate?.(note))} className="flex items-center">
+                    <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="flex-1">{note.isTemplate ? 'Unmark Template' : 'Mark as Template'}</span>
                     {!isPro && (
-                      <span className="ml-2 rounded-[4px] bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 tracking-wider leading-none">
+                      <span className="ml-1.5 rounded bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 text-[8px] font-bold text-amber-600 dark:text-amber-400 leading-none">
                         PRO
                       </span>
                     )}

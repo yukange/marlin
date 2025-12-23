@@ -221,7 +221,7 @@ export function useMarlinEditor({ isExpanded, onUpdate, space }: UseMarlinEditor
     extensions: getMarlinExtensions({
       isExpanded,
       placeholder: isExpanded ? 'Write something...' : 'Type a note...',
-      space
+      space,
     }),
     editorProps: {
       attributes: {

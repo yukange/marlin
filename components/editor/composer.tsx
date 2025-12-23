@@ -3,13 +3,13 @@
 import { EditorContent } from '@tiptap/react'
 import { Button } from '@/components/ui/button'
 import { Toggle } from '@/components/ui/toggle'
-import { Bold, Italic, Strikethrough, Code, List, ListOrdered, CheckSquare, ImageIcon } from 'lucide-react'
+import { Bold, Italic, Strikethrough, Code, List, ListOrdered, CheckSquare, ImageIcon, FileText } from 'lucide-react'
 import { useMarlinEditor, useComposerState, useComposerShortcuts, useComposerSubmit, useImageUpload } from '@/hooks/use-composer'
 import { useConfirmDialogStore } from '@/hooks/use-confirm-dialog'
 import { useProGate } from '@/hooks/use-pro-gate'
 import { cn, getPlatformKey } from '@/lib/utils'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { TemplatePicker } from './template-picker'
+
 
 interface ComposerProps {
   space: string
@@ -22,6 +22,7 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
   const openDialog = useConfirmDialogStore((state) => state.openDialog)
   const { isPro, requirePro } = useProGate()
   const [shortcutKey, setShortcutKey] = useState('')
+
 
   useEffect(() => {
     setShortcutKey(getPlatformKey())
@@ -321,19 +322,29 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
                   </span>
                 )}
               </Toggle>
-              <TemplatePicker
-                space={space}
-                onSelect={(content) => {
+              <Toggle
+                size="sm"
+                pressed={false}
+                onPressedChange={() => {
                   requirePro(() => {
-                    // Ensure composer stays expanded and insert template
-                    expand()
-                    requestAnimationFrame(() => {
-                      insertTemplate(content)
-                    })
+                    // Focus editor and insert slash to trigger slash command
+                    editor?.chain()
+                      .focus('end')
+                      .insertContent('\n/')
+                      .run()
                   })
                 }}
                 disabled={!editor}
-              />
+                className="h-8 w-8 relative"
+                title="Use template"
+              >
+                <FileText className="h-4 w-4" />
+                {!isPro && (
+                  <span className="absolute -top-1 -right-1 rounded-[3px] bg-amber-100 dark:bg-amber-900/40 px-0.5 text-[7px] font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 leading-none">
+                    PRO
+                  </span>
+                )}
+              </Toggle>
             </nav>
             <div className="flex items-center gap-2">
               <Button
