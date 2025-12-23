@@ -327,11 +327,26 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
                 pressed={false}
                 onPressedChange={() => {
                   requirePro(() => {
-                    // Focus editor and insert slash to trigger slash command
-                    editor?.chain()
-                      .focus('end')
-                      .insertContent('\n/')
-                      .run()
+                    if (!editor) return
+
+                    // Get current cursor position
+                    const { $from } = editor.state.selection
+                    const isAtStartOfLine = $from.parentOffset === 0
+                    const isEmptyDoc = editor.isEmpty
+
+                    if (isEmptyDoc || isAtStartOfLine) {
+                      // Already at start, just insert slash
+                      editor.chain().focus().insertContent('/').run()
+                    } else {
+                      // Move to end of current block, create new paragraph, insert slash
+                      // All in one chain so slash command detects startOfLine
+                      editor
+                        .chain()
+                        .focus('end')
+                        .splitBlock()
+                        .insertContent('/')
+                        .run()
+                    }
                   })
                 }}
                 disabled={!editor}
