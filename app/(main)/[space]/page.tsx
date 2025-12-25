@@ -28,6 +28,7 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
   const filterTemplates = searchParams.get('filter') === 'templates'
   const [editContent, setEditContent] = useState<string>()
   const [editingNoteId, setEditingNoteId] = useState<string>()
+  const [visibleDate, setVisibleDate] = useState<string | null>(null)
 
   const { spaces, isLoading: isLoadingSpaces } = useSpaces()
 
@@ -73,11 +74,11 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
   }
 
   return (
-    <main className="h-[calc(100vh-3.5rem)] md:h-screen dark:bg-zinc-950 flex flex-col overflow-hidden">
-      <SpaceHeader spaceName={spaceName} />
-      <div className="relative flex-1 min-h-0 overflow-hidden flex">
-        {/* Main content area */}
-        <div className="flex-1 min-w-0 relative">
+    <main className="h-[calc(100vh-3.5rem)] md:h-screen dark:bg-zinc-950 flex overflow-hidden">
+      {/* Left column: Header + NoteStream + Composer */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <SpaceHeader spaceName={spaceName} />
+        <div className="relative flex-1 min-h-0 overflow-hidden">
           <article
             data-note-stream-container
             className="h-full overflow-y-auto [scrollbar-gutter:stable] p-3 pb-8 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full"
@@ -89,6 +90,7 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
               filterTemplates={filterTemplates}
               onEditNote={handleEditNote}
               onTagClick={handleTagClick}
+              onVisibleDateChange={setVisibleDate}
             />
           </article>
           {/* Gradient mask to fade out content before Composer */}
@@ -97,18 +99,18 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
             aria-hidden="true"
           />
         </div>
-
-        {/* Calendar Bar - right sidebar, hidden on mobile */}
-        <div className="hidden md:block border-l border-zinc-200 dark:border-zinc-800">
-          <CalendarBar space={spaceName} />
-        </div>
+        <Composer
+          space={spaceName}
+          initialContent={editContent}
+          editingNoteId={editingNoteId}
+          onComplete={handleEditComplete}
+        />
       </div>
-      <Composer
-        space={spaceName}
-        initialContent={editContent}
-        editingNoteId={editingNoteId}
-        onComplete={handleEditComplete}
-      />
+
+      {/* Calendar Bar - right sidebar, hidden on mobile, spans full height */}
+      <div className="hidden md:block border-l border-zinc-200 dark:border-zinc-800">
+        <CalendarBar space={spaceName} visibleDate={visibleDate} />
+      </div>
     </main>
   )
 }

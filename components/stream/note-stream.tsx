@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { format } from 'date-fns'
 import { type Note } from '@/lib/client/db'
 import { useNotes } from '@/hooks/use-notes'
 import { useNoteMutations } from '@/hooks/use-composer'
@@ -132,6 +133,7 @@ function NoteCard({
 
   return (
     <article
+      data-date={format(note.date, 'yyyy-MM-dd')}
       className={cn(
         "rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow relative border",
         isInTrash
@@ -343,13 +345,67 @@ interface NoteStreamProps {
   filterTemplates?: boolean
   onEditNote?: (content: string, noteId: string) => void
   onTagClick?: (tag: string) => void
+  onVisibleDateChange?: (date: string | null) => void
   isInTrash?: boolean
 }
 
-export function NoteStream({ space, searchQuery = '', filterDate = '', filterTemplates = false, onEditNote, onTagClick, isInTrash = false }: NoteStreamProps) {
+export function NoteStream({ space, searchQuery = '', filterDate = '', filterTemplates = false, onEditNote, onTagClick, onVisibleDateChange, isInTrash = false }: NoteStreamProps) {
   const notes = useNotes(space, searchQuery, filterDate, isInTrash, filterTemplates)
   const { deleteNote, restoreNote, permanentDeleteNote, retrySync, toggleTemplate } = useNoteMutations()
   const openDialog = useConfirmDialogStore((state) => state.openDialog)
+  const containerRef = useRef<HTMLElement>(null)
+
+  // IntersectionObserver to detect visible notes and sync with CalendarBar
+  useEffect(() => {
+    if (!containerRef.current || !onVisibleDateChange) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the most visible note (highest intersection ratio)
+        const visibleEntries = entries.filter(e => e.isIntersecting)
+        if (visibleEntries.length === 0) return
+
+        // Get all currently visible notes in the viewport
+        const container = containerRef.current
+        if (!container) return
+
+        const noteElements = container.querySelectorAll('[data-date]')
+        const visibleNotes: { element: Element; rect: DOMRect; date: string }[] = []
+
+        noteElements.forEach(el => {
+          const rect = el.getBoundingClientRect()
+          const containerRect = container.getBoundingClientRect()
+
+          // Check if element is in viewport
+          if (rect.top < containerRect.bottom && rect.bottom > containerRect.top) {
+            const date = el.getAttribute('data-date')
+            if (date) {
+              visibleNotes.push({ element: el, rect, date })
+            }
+          }
+        })
+
+        if (visibleNotes.length > 0) {
+          // Since flex-col-reverse, the first visible note from top is the newest visible
+          // Sort by top position and get the one closest to top
+          visibleNotes.sort((a, b) => a.rect.top - b.rect.top)
+          const topVisibleNote = visibleNotes[0]
+          onVisibleDateChange(topVisibleNote.date)
+        }
+      },
+      {
+        root: containerRef.current,
+        threshold: [0, 0.25, 0.5, 0.75, 1],
+        rootMargin: '0px'
+      }
+    )
+
+    // Observe all note cards
+    const noteElements = containerRef.current.querySelectorAll('[data-date]')
+    noteElements.forEach(el => observer.observe(el))
+
+    return () => observer.disconnect()
+  }, [notes, onVisibleDateChange])
 
   const handleEdit = (note: Note) => {
     onEditNote?.(note.content, note.id)
@@ -406,7 +462,7 @@ export function NoteStream({ space, searchQuery = '', filterDate = '', filterTem
   }
 
   return (
-    <section className="flex flex-col-reverse min-h-0 gap-3">
+    <section ref={containerRef} className="flex flex-col-reverse min-h-0 gap-3">
       {notes.map(note => (
         <NoteCard
           key={note.id}
