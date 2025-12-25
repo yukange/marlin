@@ -34,7 +34,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
       <MobileSidebar />
 
       <div className="hidden md:grid md:place-items-center min-h-screen">
-        <div className="grid grid-cols-[300px_1fr] w-full max-w-[1020px]">
+        <div className="grid grid-cols-[300px_1fr] w-full max-w-[1180px]">
           <aside className="sticky top-0 h-screen">
             <Sidebar showNewSpace={showNewSpace} onNewSpaceChange={setShowNewSpace} />
           </aside>
