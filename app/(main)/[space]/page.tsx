@@ -29,6 +29,7 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
   const [editContent, setEditContent] = useState<string>()
   const [editingNoteId, setEditingNoteId] = useState<string>()
   const [visibleDate, setVisibleDate] = useState<string | null>(null)
+  const [scrollToDate, setScrollToDate] = useState<string | null>(null)
 
   const { spaces, isLoading: isLoadingSpaces } = useSpaces()
 
@@ -76,12 +77,12 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
   return (
     <main className="h-[calc(100vh-3.5rem)] md:h-screen dark:bg-zinc-950 flex overflow-hidden">
       {/* Left column: Header + NoteStream + Composer */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden px-3 pr-4">
         <SpaceHeader spaceName={spaceName} />
         <div className="relative flex-1 min-h-0 overflow-hidden">
           <article
             data-note-stream-container
-            className="h-full overflow-y-auto [scrollbar-gutter:stable] p-3 pb-8 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full"
+            className="h-full overflow-y-auto pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             <NoteStream
               space={spaceName}
@@ -91,6 +92,7 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
               onEditNote={handleEditNote}
               onTagClick={handleTagClick}
               onVisibleDateChange={setVisibleDate}
+              scrollToDate={scrollToDate}
             />
           </article>
           {/* Gradient mask to fade out content before Composer */}
@@ -109,7 +111,7 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
 
       {/* Calendar Bar - right sidebar, hidden on mobile, spans full height */}
       <div className="hidden md:block border-l border-zinc-200 dark:border-zinc-800">
-        <CalendarBar space={spaceName} visibleDate={visibleDate} />
+        <CalendarBar space={spaceName} visibleDate={visibleDate} onScrollToDate={setScrollToDate} />
       </div>
     </main>
   )

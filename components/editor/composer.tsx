@@ -204,7 +204,7 @@ export function Composer({ space, initialContent, editingNoteId, onComplete }: C
       <section
         ref={editorRef}
         className={cn(
-          "transition-all duration-300 ease-out overflow-hidden bg-white dark:bg-zinc-900 ml-3 mr-4 rounded-t-2xl flex flex-col relative",
+          "transition-all duration-300 ease-out overflow-hidden bg-white dark:bg-zinc-900 rounded-t-2xl flex flex-col relative",
           isExpanded ? "h-[400px] border border-b-0 border-zinc-200 dark:border-zinc-800 z-50 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)]" : "h-16 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_8px_rgba(0,0,0,0.3)]"
         )}
       >

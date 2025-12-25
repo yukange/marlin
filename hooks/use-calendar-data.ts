@@ -29,7 +29,7 @@ export function useCalendarData(space: string, monthsBack: number = 6) {
 
         const today = new Date();
         const startDate = startOfMonth(subMonths(today, monthsBack - 1));
-        const endDate = endOfMonth(today);
+        const endDate = today; // Only show up to today, not the rest of the month
 
         // Fetch notes in date range
         const notes = await db.notes
@@ -72,15 +72,16 @@ export function useCalendarData(space: string, monthsBack: number = 6) {
             monthsMap.get(monthLabel)!.push(calendarDay);
         });
 
-        // Convert to array, sorted by date (newest first)
+        // Convert to array, sorted by date (oldest first, matching NoteStream's flex-col-reverse)
+        // This means oldest month at top, newest (today) at bottom
         const result: CalendarMonth[] = [];
         monthsMap.forEach((days, label) => {
             result.push({
                 label,
-                days: days.reverse(), // Newest day first within month
+                days, // Days already in chronological order (oldest first)
             });
         });
 
-        return result.reverse(); // Newest month first
+        return result; // Months already in chronological order (oldest first)
     }, [space, monthsBack]);
 }
