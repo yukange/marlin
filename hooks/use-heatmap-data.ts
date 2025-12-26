@@ -23,12 +23,12 @@ export function useHeatmapData(space: string) {
     const notes = await db.notes
       .where('space')
       .equals(space)
-      .and((note: Note) => note.date >= startDate.getTime() && note.date <= endDate.getTime())
+      .and((note: Note) => note.createdAt >= startDate.getTime() && note.createdAt <= endDate.getTime())
       .toArray();
 
     const countMap = new Map<string, number>();
     notes.forEach((note: Note) => {
-      const dateStr = format(note.date, 'yyyy-MM-dd');
+      const dateStr = format(note.createdAt, 'yyyy-MM-dd');
       countMap.set(dateStr, (countMap.get(dateStr) || 0) + 1);
     });
 
@@ -39,7 +39,7 @@ export function useHeatmapData(space: string) {
       for (let day = 0; day < 7; day++) {
         const dateStr = format(currentDate, 'yyyy-MM-dd');
         const count = countMap.get(dateStr) || 0;
-        
+
         let level: 0 | 1 | 2 | 3;
         if (count === 0) level = 0;
         else if (count <= 2) level = 1;

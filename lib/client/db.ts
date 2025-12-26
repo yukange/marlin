@@ -13,10 +13,12 @@
 import Dexie, { type EntityTable } from 'dexie';
 
 export interface Note {
-  id: string; // Timestamp without .md suffix (e.g., "1700000000001")
+  id: string; // UUIDv7 (new) or timestamp (legacy, e.g., "1700000000001")
   content: string; // Pure markdown content (frontmatter stripped)
   tags: string[]; // Parsed from frontmatter or #hashtags
-  date: number; // Unix timestamp
+  date: number; // Unix timestamp (legacy field, kept for backward compatibility)
+  createdAt: number; // Unix timestamp when note was created
+  updatedAt: number; // Unix timestamp when note was last modified
   space: string; // Space name WITHOUT .marlin suffix (e.g., "work")
   sha?: string; // Git blob SHA for sync diffing (undefined for new notes)
   syncStatus: 'synced' | 'modified' | 'pending' | 'syncing' | 'error';
@@ -101,6 +103,26 @@ db.version(6).stores({
 db.version(7).stores({
   notes: 'id, sha, content, *tags, date, space, syncStatus, deleted, deletedAt, title, isTemplate, [space+date]',
   spaces: 'name, repoName, updatedAt'
+});
+
+// Version 8: Add 'createdAt' and 'updatedAt' fields
+// Migrate existing notes by inferring createdAt from ID (if numeric timestamp format)
+db.version(8).stores({
+  notes: 'id, sha, content, *tags, date, space, syncStatus, deleted, deletedAt, title, isTemplate, createdAt, updatedAt, [space+date], [space+createdAt]',
+  spaces: 'name, repoName, updatedAt'
+}).upgrade(tx => {
+  return tx.table('notes').toCollection().modify(note => {
+    // Infer createdAt from ID if it's a timestamp format (all digits)
+    if (/^\d+$/.test(note.id)) {
+      const timestamp = parseInt(note.id, 10);
+      note.createdAt = timestamp;
+      note.updatedAt = timestamp;
+    } else {
+      // For non-timestamp IDs (shouldn't exist yet, but handle gracefully)
+      note.createdAt = note.date || Date.now();
+      note.updatedAt = note.date || Date.now();
+    }
+  });
 });
 
 /**

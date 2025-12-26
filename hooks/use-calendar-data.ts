@@ -37,15 +37,15 @@ export function useCalendarData(space: string, monthsBack: number = 6) {
             .equals(space)
             .and((note: Note) =>
                 !note.deleted &&
-                note.date >= startDate.getTime() &&
-                note.date <= endDate.getTime()
+                note.createdAt >= startDate.getTime() &&
+                note.createdAt <= endDate.getTime()
             )
             .toArray();
 
         // Count notes per day
         const countMap = new Map<string, number>();
         notes.forEach((note: Note) => {
-            const dateStr = format(note.date, 'yyyy-MM-dd');
+            const dateStr = format(note.createdAt, 'yyyy-MM-dd');
             countMap.set(dateStr, (countMap.get(dateStr) || 0) + 1);
         });
 

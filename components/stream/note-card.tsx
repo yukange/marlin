@@ -130,7 +130,7 @@ export function NoteCard({
 
     return (
         <article
-            data-date={format(note.date, 'yyyy-MM-dd')}
+            data-date={format(note.createdAt, 'yyyy-MM-dd')}
             className={cn(
                 "rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow relative border",
                 isInTrash
@@ -144,7 +144,7 @@ export function NoteCard({
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <time>
-                                    {formatRelativeTime(note.deleted && note.deletedAt ? note.deletedAt : note.date)}
+                                    {formatRelativeTime(note.deleted && note.deletedAt ? note.deletedAt : note.createdAt)}
                                     {isInTrash && <span className="ml-1 text-zinc-400">(Deleted)</span>}
                                 </time>
                             </TooltipTrigger>
@@ -152,7 +152,7 @@ export function NoteCard({
                                 side="bottom"
                                 className="bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 shadow-md"
                             >
-                                <p>Created: {formatPreciseTime(note.date)}</p>
+                                <p>Created: {formatPreciseTime(note.createdAt)}</p>
                                 {note.deletedAt && <p>Deleted: {formatPreciseTime(note.deletedAt)}</p>}
                             </TooltipContent>
                         </Tooltip>

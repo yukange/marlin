@@ -3,7 +3,7 @@
  * 
  * Responsibilities:
  * - Create, update, delete notes (optimistic updates)
- * - Generate note IDs
+ * - Generate note IDs (UUIDv7)
  * - Coordinate with sync engine (fast path)
  * - Query notes from local database
  * 
@@ -12,6 +12,7 @@
  * - lib/services/sync-service.ts (for fast sync)
  */
 
+import { uuidv7 } from 'uuidv7';
 import { db, type Note } from '@/lib/client/db';
 import { isErrorWithStatus, isGitHubFile } from '@/lib/utils/type-guards';
 import { extractTitle, extractHashtags } from '@/lib/utils/markdown';
@@ -33,19 +34,19 @@ export interface UpdateNoteInput {
  * Create a new note
  * 
  * Flow:
- * 1. Generate ID from timestamp
+ * 1. Generate UUIDv7 ID
  * 2. Write to Dexie with status 'pending'
  * 3. Trigger fast sync (push single note)
  * 4. Return note ID for UI reference
  * 
- * @returns Note ID (timestamp string)
+ * @returns Note ID (UUIDv7 string)
  */
 export async function createNote(input: CreateNoteInput): Promise<string> {
   const { content, space, userLogin } = input;
 
-  // Generate ID (timestamp without .md suffix)
-  const date = Date.now();
-  const id = String(date);
+  // Generate UUIDv7 ID (time-ordered, globally unique)
+  const id = uuidv7();
+  const now = Date.now();
 
   // Extract title if present
   const title = extractTitle(content);
@@ -60,7 +61,9 @@ export async function createNote(input: CreateNoteInput): Promise<string> {
     id,
     content,
     tags,
-    date,
+    date: now, // Legacy field for backward compatibility
+    createdAt: now,
+    updatedAt: now,
     space,
     syncStatus: 'pending',
     sha: undefined,
@@ -83,7 +86,8 @@ export async function createNote(input: CreateNoteInput): Promise<string> {
  * 
  * Flow:
  * 1. Update local database with status 'modified'
- * 2. Trigger fast sync (push single note)
+ * 2. Update updatedAt timestamp
+ * 3. Trigger fast sync (push single note)
  * 
  * @throws {Error} If note not found
  */
@@ -108,6 +112,7 @@ export async function updateNote(input: UpdateNoteInput): Promise<void> {
   await db.notes.update(id, {
     content,
     tags,
+    updatedAt: Date.now(), // Update modification timestamp
     syncStatus: 'modified',
     title,
   });

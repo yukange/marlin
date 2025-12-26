@@ -16,12 +16,27 @@ import type { Note } from '@/lib/client/db';
 export interface ParsedNote {
   content: string; // Pure markdown content (frontmatter stripped)
   tags: string[];
-  date: number;
+  date: number; // Legacy field, kept for compatibility
+  createdAt: number; // When note was created
+  updatedAt: number; // When note was last modified
   deleted?: boolean;
   deletedAt?: number;
   title?: string;
   images?: string[]; // Image filenames stored in repo
   isTemplate?: boolean; // true: this note is a template
+}
+
+/**
+ * Infer timestamp from note ID (for legacy timestamp-format IDs)
+ * 
+ * @param noteId - Note ID (could be timestamp or UUIDv7)
+ * @returns Unix timestamp if ID is numeric, otherwise undefined
+ */
+export function inferDateFromNoteId(noteId: string): number | undefined {
+  if (/^\d+$/.test(noteId)) {
+    return parseInt(noteId, 10);
+  }
+  return undefined;
 }
 
 /**
@@ -31,7 +46,8 @@ export interface ParsedNote {
  * ```markdown
  * ---
  * tags: [tag1, tag2]
- * date: 1700000000001
+ * createdAt: 1700000000001
+ * updatedAt: 1700000000001
  * deleted: true
  * deletedAt: 1700000099999
  * title: My Note Title
@@ -40,16 +56,35 @@ export interface ParsedNote {
  * Note content here...
  * ```
  * 
+ * For backward compatibility, also supports legacy `date` field.
+ * 
  * @param raw - Raw markdown content with frontmatter
+ * @param noteId - Note ID (used to infer createdAt for legacy notes)
  * @returns Parsed note data
  */
-export function parseNote(raw: string): ParsedNote {
+export function parseNote(raw: string, noteId?: string): ParsedNote {
   const { data, content } = matter(raw);
+
+  // Determine createdAt with fallback logic:
+  // 1. Use frontmatter createdAt if present
+  // 2. Fall back to legacy date field
+  // 3. Infer from noteId if it's a timestamp format
+  // 4. Use current time as last resort
+  const inferredDate = noteId ? inferDateFromNoteId(noteId) : undefined;
+  const createdAt = typeof data.createdAt === 'number'
+    ? data.createdAt
+    : (typeof data.date === 'number' ? data.date : (inferredDate ?? Date.now()));
+
+  const updatedAt = typeof data.updatedAt === 'number'
+    ? data.updatedAt
+    : createdAt;
 
   return {
     content: content.trim(),
     tags: Array.isArray(data.tags) ? data.tags : [],
-    date: typeof data.date === 'number' ? data.date : Date.now(),
+    date: createdAt, // Keep date in sync with createdAt for backward compatibility
+    createdAt,
+    updatedAt,
     deleted: typeof data.deleted === 'boolean' ? data.deleted : undefined,
     deletedAt: typeof data.deletedAt === 'number' ? data.deletedAt : undefined,
     title: typeof data.title === 'string' ? data.title : undefined,
@@ -65,7 +100,8 @@ export function parseNote(raw: string): ParsedNote {
  * ```markdown
  * ---
  * tags: [tag1, tag2]
- * date: 1700000000001
+ * createdAt: 1700000000001
+ * updatedAt: 1700000000001
  * deleted: true
  * deletedAt: 1700000099999
  * title: My Note Title
@@ -78,11 +114,12 @@ export function parseNote(raw: string): ParsedNote {
  * @returns Markdown string with frontmatter
  */
 export function stringifyNote(
-  note: Pick<Note, 'content' | 'tags' | 'date' | 'deleted' | 'deletedAt' | 'title' | 'isTemplate'> & { images?: string[] }
+  note: Pick<Note, 'content' | 'tags' | 'createdAt' | 'updatedAt' | 'deleted' | 'deletedAt' | 'title' | 'isTemplate'> & { images?: string[] }
 ): string {
-  const frontmatter: Record<string, any> = {
+  const frontmatter: Record<string, unknown> = {
     tags: note.tags,
-    date: note.date,
+    createdAt: note.createdAt,
+    updatedAt: note.updatedAt,
   };
 
   if (note.title) {

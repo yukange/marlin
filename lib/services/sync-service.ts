@@ -386,7 +386,7 @@ export async function syncWorkspace(
         const content = contents[file.sha];
         if (content) {
           try {
-            const parsed = parseNote(content);
+            const parsed = parseNote(content, file.id);
             const isTrash = file.path.startsWith('.trash/');
 
             await db.notes.put({
@@ -395,6 +395,8 @@ export async function syncWorkspace(
               content: parsed.content,
               tags: parsed.tags,
               date: parsed.date,
+              createdAt: parsed.createdAt,
+              updatedAt: parsed.updatedAt,
               space: space,
               syncStatus: 'synced',
               deleted: isTrash, // Enforce deleted status based on folder

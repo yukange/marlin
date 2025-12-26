@@ -67,7 +67,7 @@ export function useNotes(space: string, searchQuery = '', filterDate = '', isInT
           endOfDay.setHours(23, 59, 59, 999)
 
           filteredNotes = filteredNotes.filter((note) => {
-            const noteDate = new Date(note.date)
+            const noteDate = new Date(note.createdAt)
             return noteDate >= startOfDay && noteDate <= endOfDay
           })
         }
@@ -76,7 +76,7 @@ export function useNotes(space: string, searchQuery = '', filterDate = '', isInT
         filteredNotes = filteredNotes.filter(n => !!n.deleted === isInTrash)
 
         // Sort by date descending
-        return filteredNotes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        return filteredNotes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       }
 
       // Default strategy: Filter on collection before materializing
@@ -96,7 +96,7 @@ export function useNotes(space: string, searchQuery = '', filterDate = '', isInT
         endOfDay.setHours(23, 59, 59, 999)
 
         collection = collection.filter((note) => {
-          const noteDate = new Date(note.date)
+          const noteDate = new Date(note.createdAt)
           return noteDate >= startOfDay && noteDate <= endOfDay
         })
       }
@@ -152,7 +152,7 @@ export function useNoteSearch({ spaceId, searchQuery }: UseNoteSearchOptions) {
 
         return notesByTag
           .filter(note => note.space === spaceId)
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       }
 
       let collection = db.notes
