@@ -1,78 +1,88 @@
-"use client"
+"use client";
 
-import { useSync } from '@/hooks/use-sync'
-import { NoteStream } from '@/components/stream/note-stream'
-import { SpaceHeader } from '@/components/layout/space-header'
-import { use, useState, useEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { useSpaces } from '@/hooks/use-spaces'
-import { db } from '@/lib/client/db'
-import dynamic from 'next/dynamic'
-import { CalendarBar } from '@/components/layout/calendar-bar'
+import dynamic from "next/dynamic";
+import { useSearchParams, useRouter } from "next/navigation";
+import { use, useState, useEffect } from "react";
 
-const Composer = dynamic(() => import('@/components/editor/composer').then(mod => mod.Composer), {
-  ssr: false,
-  loading: () => (
-    <div className="h-24 w-full p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-center justify-center">
-      <div className="h-10 w-full max-w-3xl rounded-md bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
-    </div>
-  )
-})
+import { CalendarBar } from "@/components/layout/calendar-bar";
+import { SpaceHeader } from "@/components/layout/space-header";
+import { NoteStream } from "@/components/stream/note-stream";
+import { useSpaces } from "@/hooks/use-spaces";
+import { useSync } from "@/hooks/use-sync";
+import { db } from "@/lib/client/db";
 
-export default function SpacePage({ params }: { params: Promise<{ space: string }> }) {
-  const { space: spaceName } = use(params) // URL param is the display name
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const searchQuery = searchParams.get('q') || ''
-  const filterDate = searchParams.get('date') || ''
-  const filterTemplates = searchParams.get('filter') === 'templates'
-  const [editContent, setEditContent] = useState<string>()
-  const [editingNoteId, setEditingNoteId] = useState<string>()
-  const [visibleDate, setVisibleDate] = useState<string | null>(null)
-  const [scrollToDate, setScrollToDate] = useState<string | null>(null)
+const Composer = dynamic(
+  () => import("@/components/editor/composer").then((mod) => mod.Composer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-24 w-full p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-center justify-center">
+        <div className="h-10 w-full max-w-3xl rounded-md bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+      </div>
+    ),
+  }
+);
 
-  const { spaces, isLoading: isLoadingSpaces } = useSpaces()
+export default function SpacePage({
+  params,
+}: {
+  params: Promise<{ space: string }>;
+}) {
+  const { space: spaceName } = use(params); // URL param is the display name
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get("q") || "";
+  const filterDate = searchParams.get("date") || "";
+  const filterTemplates = searchParams.get("filter") === "templates";
+  const [editContent, setEditContent] = useState<string>();
+  const [editingNoteId, setEditingNoteId] = useState<string>();
+  const [visibleDate, setVisibleDate] = useState<string | null>(null);
+  const [scrollToDate, setScrollToDate] = useState<string | null>(null);
 
-  useSync(spaceName)
+  const { isLoading: isLoadingSpaces } = useSpaces();
+
+  useSync(spaceName);
 
   // Validate space existence - directly query Dexie to avoid stale data issues
   // useLiveQuery may have brief delay after db.spaces.put() completes
   useEffect(() => {
     // Don't redirect if still loading
-    if (isLoadingSpaces) return
-
-    // Directly check Dexie DB for immediate consistency
-    db.spaces.get(spaceName).then(space => {
-      if (!space) {
-        // Space doesn't exist in DB, redirect to /app
-        router.push('/app')
-      }
-    })
-  }, [spaceName, isLoadingSpaces, router])
-
-  const handleEditNote = (content: string, noteId: string) => {
-    setEditContent(content)
-    setEditingNoteId(noteId)
-  }
-
-  const handleEditComplete = () => {
-    setEditContent(undefined)
-    setEditingNoteId(undefined)
-  }
-
-  const handleTagClick = (tag: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    const currentQuery = params.get('q')
-    const targetQuery = `#${tag}`
-
-    if (currentQuery === targetQuery) {
-      params.delete('q')
-    } else {
-      params.set('q', targetQuery)
+    if (isLoadingSpaces) {
+      return;
     }
 
-    router.push(`/${spaceName}?${params.toString()}`, { scroll: false })
-  }
+    // Directly check Dexie DB for immediate consistency
+    db.spaces.get(spaceName).then((space) => {
+      if (!space) {
+        // Space doesn't exist in DB, redirect to /app
+        router.push("/app");
+      }
+    });
+  }, [spaceName, isLoadingSpaces, router]);
+
+  const handleEditNote = (content: string, noteId: string) => {
+    setEditContent(content);
+    setEditingNoteId(noteId);
+  };
+
+  const handleEditComplete = () => {
+    setEditContent(undefined);
+    setEditingNoteId(undefined);
+  };
+
+  const handleTagClick = (tag: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const currentQuery = params.get("q");
+    const targetQuery = `#${tag}`;
+
+    if (currentQuery === targetQuery) {
+      params.delete("q");
+    } else {
+      params.set("q", targetQuery);
+    }
+
+    router.push(`/${spaceName}?${params.toString()}`, { scroll: false });
+  };
 
   return (
     <main className="h-[calc(100vh-3.5rem)] md:h-screen dark:bg-zinc-950 flex overflow-hidden">
@@ -111,8 +121,12 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
 
       {/* Calendar Bar - right sidebar, hidden on mobile, spans full height */}
       <div className="hidden md:block border-l border-zinc-200 dark:border-zinc-800">
-        <CalendarBar space={spaceName} visibleDate={visibleDate} onScrollToDate={setScrollToDate} />
+        <CalendarBar
+          space={spaceName}
+          visibleDate={visibleDate}
+          onScrollToDate={setScrollToDate}
+        />
       </div>
     </main>
-  )
+  );
 }

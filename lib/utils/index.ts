@@ -1,6 +1,6 @@
 /**
  * Utils Layer Exports
- * 
+ *
  * Re-export utility functions for convenience.
  * Pure functions with no side effects.
  */
@@ -11,8 +11,8 @@ export {
   stringifyNote,
   extractHashtags,
   mergeTags,
-} from './markdown';
-export type { ParsedNote } from './markdown';
+} from "./markdown";
+export type { ParsedNote } from "./markdown";
 
 // Date Utils
 export {
@@ -22,11 +22,7 @@ export {
   getStartOfDay,
   getEndOfDay,
   isSameDay,
-} from './date';
+} from "./date";
 
 // ID Utils
-export {
-  generateNoteId,
-  isValidNoteId,
-  parseNoteId,
-} from './id';
+export { generateNoteId, isValidNoteId, parseNoteId } from "./id";

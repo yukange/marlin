@@ -1,38 +1,45 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useStore } from "@/lib/store"
-import { Loader2, AlertCircle } from "lucide-react"
-import { useSpaces } from "@/hooks/use-spaces"
-import { Button } from "@/components/ui/button"
-import { signIn } from "next-auth/react"
-import type { Space } from "@/lib/client/db"
+import { Loader2, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useEffect } from "react";
+
+import { Button } from "@/components/ui/button";
+import { useSpaces } from "@/hooks/use-spaces";
+import { useStore } from "@/lib/store";
+
+import type { Space } from "@/lib/client/db";
 
 export default function AppRoot() {
-  const router = useRouter()
-  const { lastActiveSpace, isUnauthorized } = useStore()
-  const { spaces, isLoading } = useSpaces()
+  const router = useRouter();
+  const { lastActiveSpace, isUnauthorized } = useStore();
+  const { spaces, isLoading } = useSpaces();
 
   useEffect(() => {
     // Don't redirect if unauthorized - we'll show reconnect UI
-    if (isUnauthorized) return
+    if (isUnauthorized) {
+      return;
+    }
 
     if (!isLoading && spaces) {
       if (spaces.length > 0) {
         // Priority 1: Last active space (if it still exists)
-        if (lastActiveSpace && spaces.some((s: Space) => s.name === lastActiveSpace)) {
-          router.push(`/${lastActiveSpace}`)
+        if (
+          lastActiveSpace &&
+          spaces.some((s: Space) => s.name === lastActiveSpace)
+        ) {
+          router.push(`/${lastActiveSpace}`);
         } else {
           // Priority 2: Most recently updated space
-          router.push(`/${spaces[0].name}`)
+          router.push(`/${spaces[0].name}`);
         }
       } else {
         // No spaces: redirect to create new space
-        router.push("/new")
+        router.push("/new");
       }
     }
-  }, [spaces, isLoading, lastActiveSpace, router, isUnauthorized])
+  }, [spaces, isLoading, lastActiveSpace, router, isUnauthorized]);
 
   // Show reconnect UI if unauthorized
   if (isUnauthorized) {
@@ -46,7 +53,8 @@ export default function AppRoot() {
             Session Expired
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Your GitHub connection has expired. Please sign in again to continue.
+            Your GitHub connection has expired. Please sign in again to
+            continue.
           </p>
           <Button
             onClick={() => signIn("github")}
@@ -56,12 +64,12 @@ export default function AppRoot() {
           </Button>
         </div>
       </main>
-    )
+    );
   }
 
   return (
     <main className="grid place-items-center h-screen">
       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
     </main>
-  )
+  );
 }

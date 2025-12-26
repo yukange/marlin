@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
-import withSerwistInit from "@serwist/next";
-import packageJson from "./package.json";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+import withSerwistInit from "@serwist/next";
+
+import packageJson from "./package.json";
+
+import type { NextConfig } from "next";
 
 // Initialize Cloudflare bindings for local development
 initOpenNextCloudflareForDev();
@@ -28,16 +30,16 @@ const nextConfig: NextConfig = {
   experimental: {
     // Enable Server Actions on edge
     serverActions: {
-      bodySizeLimit: '2mb',
+      bodySizeLimit: "2mb",
     },
   },
 
   // Turbopack configuration for markdown files
   turbopack: {
     rules: {
-      '*.md': {
-        loaders: ['raw-loader'],
-        as: '*.js',
+      "*.md": {
+        loaders: ["raw-loader"],
+        as: "*.js",
       },
     },
   },
@@ -45,50 +47,50 @@ const nextConfig: NextConfig = {
   // Image optimization for Cloudflare
   images: {
     unoptimized: true,
-    formats: ['image/avif', 'image/webp'],
+    formats: ["image/avif", "image/webp"],
   },
 
   // Webpack configuration for markdown files
   webpack: (config) => {
     config.module.rules.push({
       test: /\.md$/,
-      type: 'asset/source',
-    })
-    return config
+      type: "asset/source",
+    });
+    return config;
   },
 
   async headers() {
     return [
       {
-        source: '/:path*',
+        source: "/:path*",
         headers: [
           {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on'
+            key: "X-DNS-Prefetch-Control",
+            value: "on",
           },
           {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload'
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
           },
           {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
           },
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
           {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin'
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
           },
           {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin'
-          }
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
         ],
       },
-    ]
+    ];
   },
 };
 

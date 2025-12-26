@@ -1,5 +1,6 @@
-"use client"
+"use client";
 
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,9 +8,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { useConfirmDialogStore } from "@/hooks/use-confirm-dialog"
+} from "@/components/ui/dialog";
+import { useConfirmDialogStore } from "@/hooks/use-confirm-dialog";
 
 export function ConfirmDialog() {
   const {
@@ -21,7 +21,7 @@ export function ConfirmDialog() {
     variant,
     confirm,
     cancel,
-  } = useConfirmDialogStore()
+  } = useConfirmDialogStore();
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && cancel()}>
@@ -38,9 +38,9 @@ export function ConfirmDialog() {
           <Button
             onClick={confirm}
             className={`rounded-full w-full sm:w-auto sm:min-w-[100px] font-medium ${
-              variant === 'destructive'
-                ? 'bg-red-600 hover:bg-red-700 text-white'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+              variant === "destructive"
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white"
             }`}
           >
             {confirmText}
@@ -55,5 +55,5 @@ export function ConfirmDialog() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

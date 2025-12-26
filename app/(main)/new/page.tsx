@@ -1,48 +1,56 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { useState, useMemo } from "react"
-import { createSpace, validateSpaceName } from "@/lib/services/space-service"
-import { useRouter } from "next/navigation"
-import { useMutation } from "@tanstack/react-query"
-import { Loader2, Lock, Globe, AlertCircle } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { toast } from "sonner"
+import { useMutation } from "@tanstack/react-query";
+import { Loader2, Lock, Globe, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { createSpace, validateSpaceName } from "@/lib/services/space-service";
+import { cn } from "@/lib/utils";
 
 export default function NewSpacePage() {
-  const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
-  const [isPrivate, setIsPrivate] = useState(true)
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [isPrivate, setIsPrivate] = useState(true);
 
-  const router = useRouter()
+  const router = useRouter();
 
-  const validation = useMemo(() => validateSpaceName(name), [name])
+  const validation = useMemo(() => validateSpaceName(name), [name]);
 
   const createSpaceMutation = useMutation({
     mutationFn: async () => {
-      await createSpace(name, description, isPrivate)
+      await createSpace(name, description, isPrivate);
     },
     onSuccess: () => {
       // Note: No invalidateQueries needed - createSpace writes to Dexie DB
       // and useLiveQuery in useSpaces automatically picks up the change
-      const spaceName = name.replace(/\.marlin$/, '')
-      toast.success("Space created successfully")
-      router.push(`/${spaceName}`)
+      const spaceName = name.replace(/\.marlin$/, "");
+      toast.success("Space created successfully");
+      router.push(`/${spaceName}`);
     },
     onError: (error: Error) => {
-      toast.error(`Failed to create space: ${error.message}`)
+      toast.error(`Failed to create space: ${error.message}`);
     },
-  })
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (name.trim()) {
-      createSpaceMutation.mutate()
+      createSpaceMutation.mutate();
     }
-  }
+  };
 
   return (
     <div className="flex h-full items-center justify-center p-4">
@@ -68,7 +76,9 @@ export default function NewSpacePage() {
                 disabled={createSpaceMutation.isPending}
                 className={cn(
                   "h-11",
-                  name && !validation.valid && "border-red-500 focus-visible:ring-red-500"
+                  name &&
+                    !validation.valid &&
+                    "border-red-500 focus-visible:ring-red-500"
                 )}
                 autoFocus
               />
@@ -79,7 +89,9 @@ export default function NewSpacePage() {
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  A repository named <span className="font-mono">{name || 'name'}.marlin</span> will be created
+                  A repository named{" "}
+                  <span className="font-mono">{name || "name"}.marlin</span>{" "}
+                  will be created
                 </p>
               )}
             </div>
@@ -115,12 +127,15 @@ export default function NewSpacePage() {
                     isPrivate
                       ? "border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-900/50"
                       : "border-zinc-200 dark:border-zinc-700  dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-600",
-                    createSpaceMutation.isPending && "opacity-50 cursor-not-allowed"
+                    createSpaceMutation.isPending &&
+                      "opacity-50 cursor-not-allowed"
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <Lock className="h-4 w-4" />
-                    <span className="font-medium text-sm dark:text-zinc-100">Private</span>
+                    <span className="font-medium text-sm dark:text-zinc-100">
+                      Private
+                    </span>
                   </div>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 text-left">
                     Only you can see this space
@@ -139,12 +154,15 @@ export default function NewSpacePage() {
                     !isPrivate
                       ? "border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-900/50"
                       : "border-zinc-200 dark:border-zinc-700  dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-600",
-                    createSpaceMutation.isPending && "opacity-50 cursor-not-allowed"
+                    createSpaceMutation.isPending &&
+                      "opacity-50 cursor-not-allowed"
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4" />
-                    <span className="font-medium text-sm dark:text-zinc-100">Public</span>
+                    <span className="font-medium text-sm dark:text-zinc-100">
+                      Public
+                    </span>
                   </div>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 text-left">
                     Anyone can see this space
@@ -160,7 +178,11 @@ export default function NewSpacePage() {
             <Button
               type="submit"
               className="w-full rounded-full bg-[#30CF79] hover:bg-[#2BC06E] text-white mt-4"
-              disabled={!name.trim() || !validation.valid || createSpaceMutation.isPending}
+              disabled={
+                !name.trim() ||
+                !validation.valid ||
+                createSpaceMutation.isPending
+              }
             >
               {createSpaceMutation.isPending ? (
                 <>
@@ -175,5 +197,5 @@ export default function NewSpacePage() {
         </form>
       </Card>
     </div>
-  )
+  );
 }

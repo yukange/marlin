@@ -1,31 +1,36 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Github, Loader2 } from 'lucide-react'
-import { signIn } from 'next-auth/react'
-import Link from 'next/link'
+import { Github, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 
 interface SignInButtonProps {
-  variant?: 'default' | 'primary'
-  size?: 'sm' | 'lg'
-  children?: React.ReactNode
+  variant?: "default" | "primary";
+  size?: "sm" | "lg";
+  children?: React.ReactNode;
 }
 
-export function SignInButton({ variant = 'default', size = 'sm', children }: SignInButtonProps) {
-  const [isLoading, setIsLoading] = useState(false)
+export function SignInButton({
+  variant = "default",
+  size = "sm",
+  children,
+}: SignInButtonProps) {
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      await signIn('github', { callbackUrl: '/app' })
+      await signIn("github", { callbackUrl: "/app" });
     } catch (error) {
-      console.error('Sign in error:', error)
-      setIsLoading(false)
+      console.error("Sign in error:", error);
+      setIsLoading(false);
     }
-  }
+  };
 
-  if (variant === 'primary') {
+  if (variant === "primary") {
     return (
       <div className="flex flex-col items-center gap-3">
         <Button
@@ -40,21 +45,27 @@ export function SignInButton({ variant = 'default', size = 'sm', children }: Sig
               Connecting to GitHub...
             </>
           ) : (
-            children || 'Start Writing for Free'
+            children || "Start Writing for Free"
           )}
         </Button>
         <p className="text-xs text-zinc-500">
-          By signing in, you agree to our{' '}
-          <Link href="/privacy" className="underline hover:text-zinc-300 transition-colors">
+          By signing in, you agree to our{" "}
+          <Link
+            href="/privacy"
+            className="underline hover:text-zinc-300 transition-colors"
+          >
             Privacy Policy
-          </Link>{' '}
-          and{' '}
-          <Link href="/terms" className="underline hover:text-zinc-300 transition-colors">
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/terms"
+            className="underline hover:text-zinc-300 transition-colors"
+          >
             Terms of Service
           </Link>
         </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -72,9 +83,9 @@ export function SignInButton({ variant = 'default', size = 'sm', children }: Sig
       ) : (
         <>
           <Github className="h-4 w-4" />
-          {children || 'Sign in with GitHub'}
+          {children || "Sign in with GitHub"}
         </>
       )}
     </Button>
-  )
+  );
 }

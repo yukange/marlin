@@ -1,17 +1,18 @@
 /**
  * Markdown Utilities (Utility Layer)
- * 
+ *
  * Responsibilities:
  * - Parse frontmatter from markdown files
  * - Serialize notes to markdown with frontmatter
  * - Pure functions with no side effects
- * 
+ *
  * Depends on:
  * - gray-matter (external library)
  */
 
-import matter from 'gray-matter';
-import type { Note } from '@/lib/client/db';
+import matter from "gray-matter";
+
+import type { Note } from "@/lib/client/db";
 
 export interface ParsedNote {
   content: string; // Pure markdown content (frontmatter stripped)
@@ -28,7 +29,7 @@ export interface ParsedNote {
 
 /**
  * Infer timestamp from note ID (for legacy timestamp-format IDs)
- * 
+ *
  * @param noteId - Note ID (could be timestamp or UUIDv7)
  * @returns Unix timestamp if ID is numeric, otherwise undefined
  */
@@ -41,7 +42,7 @@ export function inferDateFromNoteId(noteId: string): number | undefined {
 
 /**
  * Parse markdown file with frontmatter
- * 
+ *
  * Expected format:
  * ```markdown
  * ---
@@ -52,12 +53,12 @@ export function inferDateFromNoteId(noteId: string): number | undefined {
  * deletedAt: 1700000099999
  * title: My Note Title
  * ---
- * 
+ *
  * Note content here...
  * ```
- * 
+ *
  * For backward compatibility, also supports legacy `date` field.
- * 
+ *
  * @param raw - Raw markdown content with frontmatter
  * @param noteId - Note ID (used to infer createdAt for legacy notes)
  * @returns Parsed note data
@@ -71,13 +72,15 @@ export function parseNote(raw: string, noteId?: string): ParsedNote {
   // 3. Infer from noteId if it's a timestamp format
   // 4. Use current time as last resort
   const inferredDate = noteId ? inferDateFromNoteId(noteId) : undefined;
-  const createdAt = typeof data.createdAt === 'number'
-    ? data.createdAt
-    : (typeof data.date === 'number' ? data.date : (inferredDate ?? Date.now()));
+  const createdAt =
+    typeof data.createdAt === "number"
+      ? data.createdAt
+      : typeof data.date === "number"
+        ? data.date
+        : (inferredDate ?? Date.now());
 
-  const updatedAt = typeof data.updatedAt === 'number'
-    ? data.updatedAt
-    : createdAt;
+  const updatedAt =
+    typeof data.updatedAt === "number" ? data.updatedAt : createdAt;
 
   return {
     content: content.trim(),
@@ -85,17 +88,18 @@ export function parseNote(raw: string, noteId?: string): ParsedNote {
     date: createdAt, // Keep date in sync with createdAt for backward compatibility
     createdAt,
     updatedAt,
-    deleted: typeof data.deleted === 'boolean' ? data.deleted : undefined,
-    deletedAt: typeof data.deletedAt === 'number' ? data.deletedAt : undefined,
-    title: typeof data.title === 'string' ? data.title : undefined,
+    deleted: typeof data.deleted === "boolean" ? data.deleted : undefined,
+    deletedAt: typeof data.deletedAt === "number" ? data.deletedAt : undefined,
+    title: typeof data.title === "string" ? data.title : undefined,
     images: Array.isArray(data.images) ? data.images : undefined,
-    isTemplate: typeof data.isTemplate === 'boolean' ? data.isTemplate : undefined,
+    isTemplate:
+      typeof data.isTemplate === "boolean" ? data.isTemplate : undefined,
   };
 }
 
 /**
  * Serialize note to markdown with frontmatter
- * 
+ *
  * Output format:
  * ```markdown
  * ---
@@ -106,15 +110,25 @@ export function parseNote(raw: string, noteId?: string): ParsedNote {
  * deletedAt: 1700000099999
  * title: My Note Title
  * ---
- * 
+ *
  * Note content here...
  * ```
- * 
+ *
  * @param note - Note object from database
  * @returns Markdown string with frontmatter
  */
 export function stringifyNote(
-  note: Pick<Note, 'content' | 'tags' | 'createdAt' | 'updatedAt' | 'deleted' | 'deletedAt' | 'title' | 'isTemplate'> & { images?: string[] }
+  note: Pick<
+    Note,
+    | "content"
+    | "tags"
+    | "createdAt"
+    | "updatedAt"
+    | "deleted"
+    | "deletedAt"
+    | "title"
+    | "isTemplate"
+  > & { images?: string[] }
 ): string {
   const frontmatter: Record<string, unknown> = {
     tags: note.tags,
@@ -149,15 +163,15 @@ export function stringifyNote(
 
 /**
  * Extract title from markdown content
- * 
+ *
  * If the first line starts with "# ", extract the text as title.
- * 
+ *
  * @param content - Markdown content
  * @returns Title string or undefined
  */
 export function extractTitle(content: string): string | undefined {
-  const firstLine = content.split('\n')[0];
-  if (firstLine?.startsWith('# ')) {
+  const firstLine = content.split("\n")[0];
+  if (firstLine?.startsWith("# ")) {
     return firstLine.substring(2).trim();
   }
   return undefined;
@@ -165,10 +179,10 @@ export function extractTitle(content: string): string | undefined {
 
 /**
  * Extract hashtags from markdown content
- * 
+ *
  * Matches patterns like #tag, #work-note, #2024
  * Does NOT match #123 (pure numbers) or ##heading (markdown headings)
- * 
+ *
  * @param content - Markdown content
  * @returns Array of unique tags (without # prefix)
  */
@@ -190,14 +204,17 @@ export function extractHashtags(content: string): string[] {
 
 /**
  * Merge tags from frontmatter and hashtags in content
- * 
+ *
  * Useful when auto-detecting tags from content.
- * 
+ *
  * @param frontmatterTags - Tags from YAML frontmatter
  * @param content - Markdown content to scan for hashtags
  * @returns Deduplicated array of tags
  */
-export function mergeTags(frontmatterTags: string[], content: string): string[] {
+export function mergeTags(
+  frontmatterTags: string[],
+  content: string
+): string[] {
   const hashtagsFromContent = extractHashtags(content);
   const allTags = new Set([...frontmatterTags, ...hashtagsFromContent]);
   return Array.from(allTags).sort();
@@ -205,10 +222,10 @@ export function mergeTags(frontmatterTags: string[], content: string): string[] 
 
 /**
  * Extract image filenames from markdown content
- * 
+ *
  * Matches proxy URLs like: /api/proxy/image/user/repo.marlin/images/filename.png
  * Extracts just the filename (e.g., "filename.png")
- * 
+ *
  * @param content - Markdown content
  * @returns Array of unique image filenames
  */

@@ -1,17 +1,17 @@
 /**
  * Authentication Service (Business Layer)
- * 
+ *
  * Responsibilities:
  * - Fetch authenticated user profile
  * - Check API rate limits
- * 
+ *
  * Note: License validation has been moved to license-service.ts
- * 
+ *
  * Depends on:
  * - lib/client/github-api.ts
  */
 
-import { octokit } from '@/lib/client/github-api';
+import { octokit } from "@/lib/client/github-api";
 
 export interface GitHubUser {
   login: string;
@@ -35,7 +35,7 @@ export interface RateLimit {
 
 /**
  * Get authenticated user profile
- * 
+ *
  * @returns User profile data
  * @throws {GitHubApiError} If not authenticated or API fails
  */
@@ -46,7 +46,7 @@ export async function getUserProfile(): Promise<GitHubUser> {
 
 /**
  * Get GitHub API rate limit status
- * 
+ *
  * @returns Rate limit information for current user
  */
 export async function getRateLimit(): Promise<RateLimit> {
@@ -56,7 +56,7 @@ export async function getRateLimit(): Promise<RateLimit> {
 
 /**
  * Check if user is authenticated
- * 
+ *
  * @returns true if user can access GitHub API
  */
 export async function isAuthenticated(): Promise<boolean> {

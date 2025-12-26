@@ -1,16 +1,17 @@
 /**
  * GitHub API Client (Infrastructure Layer)
- * 
+ *
  * Responsibilities:
  * - Raw HTTP communication with GitHub via Octokit (proxied via /api/proxy)
  * - Error handling and response parsing
  * - NO business logic
- * 
+ *
  * This is the ONLY place where GitHub API calls should happen.
  */
 
-import { useStore } from "@/lib/store";
 import { Octokit } from "octokit";
+
+import { useStore } from "@/lib/store";
 
 export interface GitHubApiError extends Error {
   status?: number;
@@ -23,14 +24,14 @@ export const octokit = new Octokit({
 });
 
 // Hook to handle unauthorized errors globally
-octokit.hook.after("request", async (response, _options) => {
+octokit.hook.after("request", async (response) => {
   if (response.status === 401) {
     useStore.getState().setIsUnauthorized(true);
   }
 });
 
-octokit.hook.error("request", async (error, _options) => {
-  if ('status' in error && error.status === 401) {
+octokit.hook.error("request", async (error) => {
+  if ("status" in error && error.status === 401) {
     useStore.getState().setIsUnauthorized(true);
   }
   throw error;
@@ -85,7 +86,7 @@ export async function fetchRemoteTreeSha(
     const data = await octokit.graphql<RepositoryQuery>(query, { owner, repo });
     return data.repository?.object?.oid || null;
   } catch (error) {
-    console.error('Failed to fetch remote tree SHA:', error);
+    console.error("Failed to fetch remote tree SHA:", error);
     return null;
   }
 }
@@ -96,7 +97,7 @@ export async function fetchRemoteTreeSha(
 export async function fetchNotesTree(
   owner: string,
   repo: string
-): Promise<Array<{ path: string; sha: string; type: 'blob' }>> {
+): Promise<Array<{ path: string; sha: string; type: "blob" }>> {
   const query = `
     query($owner: String!, $repo: String!) {
       repository(owner: $owner, name: $repo) {
@@ -127,27 +128,29 @@ export async function fetchNotesTree(
 
     // Check for GraphQL errors (repository not found)
     // GraphQL may return 200 but include errors array
-    if ('errors' in data && Array.isArray(data.errors)) {
+    if ("errors" in data && Array.isArray(data.errors)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GraphQL error type not exposed
       const notFoundError = (data.errors as any[]).find(
-        (err: any) => err.type === 'NOT_FOUND'
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GraphQL error type not exposed
+        (err: any) => err.type === "NOT_FOUND"
       );
       if (notFoundError) {
-        const error = new Error('Repository not found') as GitHubApiError;
+        const error = new Error("Repository not found") as GitHubApiError;
         error.status = 404;
         throw error;
       }
     }
 
-    const results: Array<{ path: string; sha: string; type: 'blob' }> = [];
+    const results: Array<{ path: string; sha: string; type: "blob" }> = [];
 
     // Process notes/ directory
     const notesEntries = data.repository?.notesTree?.entries || [];
     notesEntries.forEach((e) => {
-      if (e.type === 'blob' && e.name.endsWith('.md')) {
+      if (e.type === "blob" && e.name.endsWith(".md")) {
         results.push({
           path: `notes/${e.name}`,
           sha: e.oid,
-          type: 'blob',
+          type: "blob",
         });
       }
     });
@@ -155,11 +158,11 @@ export async function fetchNotesTree(
     // Process .trash/ directory
     const trashEntries = data.repository?.trashTree?.entries || [];
     trashEntries.forEach((e) => {
-      if (e.type === 'blob' && e.name.endsWith('.md')) {
+      if (e.type === "blob" && e.name.endsWith(".md")) {
         results.push({
           path: `.trash/${e.name}`,
           sha: e.oid,
-          type: 'blob',
+          type: "blob",
         });
       }
     });
@@ -168,10 +171,15 @@ export async function fetchNotesTree(
   } catch (error: unknown) {
     // GraphqlResponseError: Check if repository not found
     if (error instanceof Error) {
-      const message = error.message || '';
+      const message = error.message || "";
       // GraphQL throws "Could not resolve to a Repository" when repo doesn't exist
-      if (message.includes('Could not resolve to a Repository') || message.includes('NOT_FOUND')) {
-        const notFoundError = new Error('Repository not found') as GitHubApiError;
+      if (
+        message.includes("Could not resolve to a Repository") ||
+        message.includes("NOT_FOUND")
+      ) {
+        const notFoundError = new Error(
+          "Repository not found"
+        ) as GitHubApiError;
         notFoundError.status = 404;
         throw notFoundError;
       }
@@ -188,7 +196,9 @@ export async function fetchBlobs(
   repo: string,
   shas: string[]
 ): Promise<Record<string, string>> {
-  if (shas.length === 0) return {};
+  if (shas.length === 0) {
+    return {};
+  }
 
   // GraphQL aliases must be alphanumeric
   const aliasMap = new Map<string, string>();
@@ -203,7 +213,7 @@ export async function fetchBlobs(
   const query = `
     query($owner: String!, $repo: String!) {
       repository(owner: $owner, name: $repo) {
-        ${queryParts.join('\n')}
+        ${queryParts.join("\n")}
       }
     }
   `;
@@ -214,7 +224,7 @@ export async function fetchBlobs(
   if (data.repository) {
     for (const [alias, content] of Object.entries(data.repository)) {
       const sha = aliasMap.get(alias);
-      if (sha && content && 'text' in content) {
+      if (sha && content && "text" in content) {
         result[sha] = (content as BlobObject).text;
       }
     }

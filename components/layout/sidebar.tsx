@@ -1,57 +1,70 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Image from "next/image"
-import { SpaceSwitcher } from "@/components/layout/space-switcher"
-import { UserNav } from "@/components/layout/user-nav"
-import { Heatmap } from "@/components/layout/heatmap"
-import { NewSpaceForm } from "@/components/layout/new-space-form"
-import { cn } from "@/lib/utils"
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
-import { Hash, Trash2, Library, FileText } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useRouter, useParams, useSearchParams, usePathname } from "next/navigation"
-import { useLiveQuery } from "dexie-react-hooks"
-import { db } from "@/lib/client/db"
-import { useSidebar } from "@/components/layout/sidebar-context"
+import { useLiveQuery } from "dexie-react-hooks";
+import { Hash, Trash2, Library, FileText } from "lucide-react";
+import Image from "next/image";
+import {
+  useRouter,
+  useParams,
+  useSearchParams,
+  usePathname,
+} from "next/navigation";
+import * as React from "react";
+
+import { Heatmap } from "@/components/layout/heatmap";
+import { NewSpaceForm } from "@/components/layout/new-space-form";
+import { useSidebar } from "@/components/layout/sidebar-context";
+import { SpaceSwitcher } from "@/components/layout/space-switcher";
+import { UserNav } from "@/components/layout/user-nav";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { db } from "@/lib/client/db";
+import { cn } from "@/lib/utils";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
-  showNewSpace?: boolean
-  onNewSpaceChange?: (show: boolean) => void
+  showNewSpace?: boolean;
+  onNewSpaceChange?: (show: boolean) => void;
 }
 
-export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: SidebarProps) {
-  const router = useRouter()
-  const params = useParams()
-  const searchParams = useSearchParams()
-  const pathname = usePathname()
+export function Sidebar({
+  className,
+  showNewSpace = false,
+  onNewSpaceChange,
+}: SidebarProps) {
+  const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
-  const currentSpaceName = params.space as string
-  const currentQuery = searchParams.get('q') || ''
+  const currentSpaceName = params.space as string;
+  const currentQuery = searchParams.get("q") || "";
 
-  const isTrashActive = pathname?.endsWith('/trash')
-  const isTemplatesActive = searchParams.get('filter') === 'templates'
-  const isAllNotesActive = pathname === `/${currentSpaceName}` && !currentQuery && !isTrashActive && !isTemplatesActive
+  const isTrashActive = pathname?.endsWith("/trash");
+  const isTemplatesActive = searchParams.get("filter") === "templates";
+  const isAllNotesActive =
+    pathname === `/${currentSpaceName}` &&
+    !currentQuery &&
+    !isTrashActive &&
+    !isTemplatesActive;
 
-  const allTags = useLiveQuery(
-    async () => {
-      if (!currentSpaceName) return []
+  const allTags = useLiveQuery(async () => {
+    if (!currentSpaceName) {
+      return [];
+    }
 
-      const notes = await db.notes
-        .where('space')
-        .equals(currentSpaceName)
-        .filter(note => !note.deleted)
-        .toArray()
+    const notes = await db.notes
+      .where("space")
+      .equals(currentSpaceName)
+      .filter((note) => !note.deleted)
+      .toArray();
 
-      const tagSet = new Set<string>()
-      notes.forEach(note => {
-        note.tags.forEach(tag => tagSet.add(tag))
-      })
+    const tagSet = new Set<string>();
+    notes.forEach((note) => {
+      note.tags.forEach((tag) => tagSet.add(tag));
+    });
 
-      return Array.from(tagSet).sort()
-    },
-    [currentSpaceName]
-  )
+    return Array.from(tagSet).sort();
+  }, [currentSpaceName]);
 
   if (showNewSpace) {
     return (
@@ -59,24 +72,29 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
         onCancel={() => onNewSpaceChange?.(false)}
         onSuccess={() => onNewSpaceChange?.(false)}
       />
-    )
+    );
   }
 
   const handleTagClick = (tag: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    const targetQuery = `#${tag}`
+    const params = new URLSearchParams(searchParams.toString());
+    const targetQuery = `#${tag}`;
 
     if (currentQuery === targetQuery) {
-      params.delete('q')
+      params.delete("q");
     } else {
-      params.set('q', targetQuery)
+      params.set("q", targetQuery);
     }
 
-    router.push(`/${currentSpaceName}?${params.toString()}`)
-  }
+    router.push(`/${currentSpaceName}?${params.toString()}`);
+  };
 
   return (
-    <aside className={cn("flex flex-col h-screen dark:bg-zinc-950 backdrop-blur-xl w-[300px] p-[10px] overflow-hidden", className)}>
+    <aside
+      className={cn(
+        "flex flex-col h-screen dark:bg-zinc-950 backdrop-blur-xl w-[300px] p-[10px] overflow-hidden",
+        className
+      )}
+    >
       <nav className="flex-1 flex flex-col min-h-0 space-y-4">
         <section className="flex-shrink-0">
           <div className="mb-4 flex items-center gap-3">
@@ -148,9 +166,9 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
               )}
               onClick={() => {
                 if (isTemplatesActive) {
-                  router.push(`/${currentSpaceName}`)
+                  router.push(`/${currentSpaceName}`);
                 } else {
-                  router.push(`/${currentSpaceName}?filter=templates`)
+                  router.push(`/${currentSpaceName}?filter=templates`);
                 }
               }}
             >
@@ -167,7 +185,7 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
             </h2>
             <ul className="flex-1 overflow-y-auto space-y-1 min-h-0 [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full">
               {allTags.map((tag) => {
-                const isSelected = currentQuery === `#${tag}`
+                const isSelected = currentQuery === `#${tag}`;
                 return (
                   <li key={tag}>
                     <button
@@ -184,7 +202,7 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
                       {tag}
                     </button>
                   </li>
-                )
+                );
               })}
             </ul>
           </section>
@@ -193,7 +211,11 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
           <div className="flex-shrink-0 mt-auto pt-2">
             <Button
               variant={isTrashActive ? "secondary" : "ghost"}
-              className={cn("w-full justify-start text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200", isTrashActive && "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100")}
+              className={cn(
+                "w-full justify-start text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200",
+                isTrashActive &&
+                  "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+              )}
               onClick={() => router.push(`/${currentSpaceName}/trash`)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -206,11 +228,11 @@ export function Sidebar({ className, showNewSpace = false, onNewSpaceChange }: S
         <UserNav />
       </footer>
     </aside>
-  )
+  );
 }
 
 export function MobileSidebar() {
-  const { sidebarOpen, setSidebarOpen } = useSidebar()
+  const { sidebarOpen, setSidebarOpen } = useSidebar();
 
   return (
     <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -219,18 +241,18 @@ export function MobileSidebar() {
         <MobileSidebarContent onClose={() => setSidebarOpen(false)} />
       </SheetContent>
     </Sheet>
-  )
+  );
 }
 
 function MobileSidebarContent({ onClose }: { onClose: () => void }) {
-  const [showNewSpace, setShowNewSpace] = React.useState(false)
+  const [showNewSpace, setShowNewSpace] = React.useState(false);
 
   const handleNewSpaceChange = (show: boolean) => {
-    setShowNewSpace(show)
+    setShowNewSpace(show);
     if (!show) {
-      onClose()
+      onClose();
     }
-  }
+  };
 
   return (
     <Sidebar
@@ -238,5 +260,5 @@ function MobileSidebarContent({ onClose }: { onClose: () => void }) {
       showNewSpace={showNewSpace}
       onNewSpaceChange={handleNewSpaceChange}
     />
-  )
+  );
 }

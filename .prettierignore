@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+out/
+build/
+.open-next/
+.wrangler/
+
+# Generated files
+*.min.js
+*.min.css
+tsconfig.tsbuildinfo
+
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Misc
+.git/
+.DS_Store
+*.md
