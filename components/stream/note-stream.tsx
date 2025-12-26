@@ -53,6 +53,44 @@ export function NoteStream({
   // Flag to prevent triggering onVisibleDateChange during programmatic scroll
   const isProgrammaticScroll = useRef(false);
   const lastScrollToDate = useRef<string | null>(null);
+  const bottomAnchorRef = useRef<HTMLDivElement>(null);
+
+  // Helper to reset isProgrammaticScroll after scroll completes
+  const resetScrollFlagOnEnd = (scrollContainer: Element) => {
+    scrollContainer.addEventListener(
+      "scrollend",
+      () => {
+        isProgrammaticScroll.current = false;
+      },
+      { once: true }
+    );
+  };
+
+  // Scroll to bottom when new note is created (listen for custom event from Composer)
+  useEffect(() => {
+    const handleNoteCreated = () => {
+      const container = containerRef.current;
+      const scrollContainer = container?.parentElement;
+      if (!container || !scrollContainer) {
+        return;
+      }
+
+      // Wait for the new note to be rendered, then scroll to bottom
+      const observer = new MutationObserver(() => {
+        observer.disconnect();
+        if (bottomAnchorRef.current) {
+          isProgrammaticScroll.current = true;
+          bottomAnchorRef.current.scrollIntoView({ behavior: "smooth" });
+          resetScrollFlagOnEnd(scrollContainer);
+        }
+      });
+
+      observer.observe(container, { childList: true });
+    };
+
+    window.addEventListener("note:created", handleNoteCreated);
+    return () => window.removeEventListener("note:created", handleNoteCreated);
+  }, []);
 
   // Scroll to date when triggered from CalendarBar
   useEffect(() => {
@@ -79,12 +117,8 @@ export function NoteStream({
           behavior: "smooth",
           block: "center",
         });
+        resetScrollFlagOnEnd(scrollContainer);
       }
-
-      // Reset flag after scroll completes
-      setTimeout(() => {
-        isProgrammaticScroll.current = false;
-      }, 600);
     }
   }, [scrollToDate]);
 
@@ -221,6 +255,8 @@ export function NoteStream({
 
   return (
     <section ref={containerRef} className="flex flex-col-reverse min-h-0 gap-3">
+      {/* Anchor at DOM first position = visual bottom for scrollIntoView */}
+      <div ref={bottomAnchorRef} aria-hidden="true" />
       {notes.map((note) => (
         <NoteCard
           key={note.id}

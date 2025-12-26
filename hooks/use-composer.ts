@@ -551,6 +551,8 @@ export function useComposerSubmit({
         content: markdownContent,
         images: currentImages,
       });
+      // Dispatch custom event to trigger scroll to bottom in NoteStream
+      window.dispatchEvent(new CustomEvent("note:created"));
     }
 
     onSuccess();
