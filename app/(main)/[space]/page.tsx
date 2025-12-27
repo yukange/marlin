@@ -36,8 +36,10 @@ export default function SpacePage({
   const filterTemplates = searchParams.get("filter") === "templates";
   const [editContent, setEditContent] = useState<string>();
   const [editingNoteId, setEditingNoteId] = useState<string>();
+  
+  // visibleDate: which date's notes are currently visible in NoteStream
+  // This is a read-only value reported by NoteStream, displayed by CalendarBar
   const [visibleDate, setVisibleDate] = useState<string | null>(null);
-  const [scrollToDate, setScrollToDate] = useState<string | null>(null);
 
   const { isLoading: isLoadingSpaces } = useSpaces();
 
@@ -102,7 +104,6 @@ export default function SpacePage({
               onEditNote={handleEditNote}
               onTagClick={handleTagClick}
               onVisibleDateChange={setVisibleDate}
-              scrollToDate={scrollToDate}
             />
           </article>
           {/* Gradient mask to fade out content before Composer */}
@@ -124,7 +125,6 @@ export default function SpacePage({
         <CalendarBar
           space={spaceName}
           visibleDate={visibleDate}
-          onScrollToDate={setScrollToDate}
         />
       </div>
     </main>

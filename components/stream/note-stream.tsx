@@ -17,8 +17,7 @@ interface NoteStreamProps {
   filterTemplates?: boolean;
   onEditNote?: (content: string, noteId: string) => void;
   onTagClick?: (tag: string) => void;
-  onVisibleDateChange?: (date: string | null) => void;
-  scrollToDate?: string | null; // Date to scroll to (from CalendarBar)
+  onVisibleDateChange?: (date: string | null) => void; // Report which date is visible
   isInTrash?: boolean;
 }
 
@@ -30,7 +29,6 @@ export function NoteStream({
   onEditNote,
   onTagClick,
   onVisibleDateChange,
-  scrollToDate,
   isInTrash = false,
 }: NoteStreamProps) {
   const notes = useNotes(
@@ -49,22 +47,10 @@ export function NoteStream({
   } = useNoteMutations();
   const openDialog = useConfirmDialogStore((state) => state.openDialog);
   const containerRef = useRef<HTMLElement>(null);
-
-  // Flag to prevent triggering onVisibleDateChange during programmatic scroll
-  const isProgrammaticScroll = useRef(false);
-  const lastScrollToDate = useRef<string | null>(null);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
-
-  // Helper to reset isProgrammaticScroll after scroll completes
-  const resetScrollFlagOnEnd = (scrollContainer: Element) => {
-    scrollContainer.addEventListener(
-      "scrollend",
-      () => {
-        isProgrammaticScroll.current = false;
-      },
-      { once: true }
-    );
-  };
+  
+  // Flag to skip visibility detection during programmatic scroll
+  const isProgrammaticScroll = useRef(false);
 
   // Scroll to bottom when new note is created (listen for custom event from Composer)
   useEffect(() => {
@@ -81,7 +67,10 @@ export function NoteStream({
         if (bottomAnchorRef.current) {
           isProgrammaticScroll.current = true;
           bottomAnchorRef.current.scrollIntoView({ behavior: "smooth" });
-          resetScrollFlagOnEnd(scrollContainer);
+          // Reset flag after scroll completes
+          scrollContainer.addEventListener("scrollend", () => {
+            isProgrammaticScroll.current = false;
+          }, { once: true });
         }
       });
 
@@ -92,43 +81,51 @@ export function NoteStream({
     return () => window.removeEventListener("note:created", handleNoteCreated);
   }, []);
 
-  // Scroll to date when triggered from CalendarBar
+  // Listen for navigation event from CalendarBar
   useEffect(() => {
-    if (
-      !scrollToDate ||
-      !containerRef.current ||
-      scrollToDate === lastScrollToDate.current
-    ) {
-      return;
-    }
-
-    // Find the first note with matching date
-    const noteElement = containerRef.current.querySelector(
-      `[data-date="${scrollToDate}"]`
-    );
-    if (noteElement) {
-      isProgrammaticScroll.current = true;
-      lastScrollToDate.current = scrollToDate;
-
-      // Get the parent scrollable container (the article element)
-      const scrollContainer = containerRef.current.parentElement;
-      if (scrollContainer) {
-        noteElement.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-        resetScrollFlagOnEnd(scrollContainer);
+    const handleScrollToDate = (event: CustomEvent<string>) => {
+      const targetDate = event.detail;
+      if (!targetDate || !containerRef.current) {
+        return;
       }
-    }
-  }, [scrollToDate]);
 
-  // IntersectionObserver to detect visible notes and sync with CalendarBar
+      // Find all notes with matching date
+      const noteElements = containerRef.current.querySelectorAll(
+        `[data-date="${targetDate}"]`
+      );
+      
+      if (noteElements.length > 0) {
+        // In flex-col-reverse, the LAST DOM element is the FIRST (oldest) note visually (at top)
+        const firstNoteOfDate = noteElements[noteElements.length - 1];
+        
+        isProgrammaticScroll.current = true;
+        
+        const scrollContainer = containerRef.current.parentElement;
+        if (scrollContainer) {
+          firstNoteOfDate.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+          // Reset flag and update visible date after scroll completes
+          scrollContainer.addEventListener("scrollend", () => {
+            isProgrammaticScroll.current = false;
+            // Manually update visible date since IntersectionObserver skipped during scroll
+            onVisibleDateChange?.(targetDate);
+          }, { once: true });
+        }
+      }
+    };
+
+    window.addEventListener("calendar:scrollToDate", handleScrollToDate as EventListener);
+    return () => window.removeEventListener("calendar:scrollToDate", handleScrollToDate as EventListener);
+  }, [onVisibleDateChange]);
+
+  // IntersectionObserver to detect visible notes and report to parent
   useEffect(() => {
     if (!containerRef.current || !onVisibleDateChange) {
       return;
     }
 
-    // The actual scroll container is the parent article element
     const scrollContainer = containerRef.current.parentElement;
     if (!scrollContainer) {
       return;
@@ -136,54 +133,47 @@ export function NoteStream({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        // Skip if this is a programmatic scroll
+        // Skip during programmatic scroll
         if (isProgrammaticScroll.current) {
           return;
         }
 
-        // Find the most visible note (highest intersection ratio)
         const visibleEntries = entries.filter((e) => e.isIntersecting);
         if (visibleEntries.length === 0) {
           return;
         }
 
-        // Get all currently visible notes in the viewport
         const container = containerRef.current;
         if (!container) {
           return;
         }
 
+        // Find the topmost visible note
+        // Since notes are ordered from oldest to newest, the topmost is the first to enter viewport
         const noteElements = container.querySelectorAll("[data-date]");
-        const visibleNotes: {
-          element: Element;
-          rect: DOMRect;
-          date: string;
-        }[] = [];
-
         const scrollRect = scrollContainer.getBoundingClientRect();
+        
+        let topmostDate: string | null = null;
+        let topmostTop = Infinity;
 
         noteElements.forEach((el) => {
           const rect = el.getBoundingClientRect();
-
-          // Check if element is in scroll container's viewport
+          // Check if element is in viewport
           if (rect.top < scrollRect.bottom && rect.bottom > scrollRect.top) {
             const date = el.getAttribute("data-date");
-            if (date) {
-              visibleNotes.push({ element: el, rect, date });
+            if (date && rect.top < topmostTop) {
+              topmostDate = date;
+              topmostTop = rect.top;
             }
           }
         });
 
-        if (visibleNotes.length > 0) {
-          // Since flex-col-reverse, the first visible note from top is the newest visible
-          // Sort by top position and get the one closest to top
-          visibleNotes.sort((a, b) => a.rect.top - b.rect.top);
-          const topVisibleNote = visibleNotes[0];
-          onVisibleDateChange(topVisibleNote.date);
+        if (topmostDate) {
+          onVisibleDateChange(topmostDate);
         }
       },
       {
-        root: scrollContainer, // Use the actual scroll container as root
+        root: scrollContainer,
         threshold: [0, 0.25, 0.5, 0.75, 1],
         rootMargin: "0px",
       }
