@@ -11,9 +11,9 @@
  *
  * The customer_id is the Creem customer ID linked to the user.
  */
-import { Portal } from '@creem_io/nextjs'
+import { Portal } from "@creem_io/nextjs";
 
 export const GET = Portal({
-    apiKey: process.env.CREEM_API_KEY!,
-    testMode: process.env.NODE_ENV !== 'production',
-})
+  apiKey: process.env.CREEM_API_KEY!,
+  testMode: process.env.NODE_ENV !== "production",
+});

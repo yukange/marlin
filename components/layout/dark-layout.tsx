@@ -1,4 +1,4 @@
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/components/theme-provider";
 
 export function DarkLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,5 +11,5 @@ export function DarkLayout({ children }: { children: React.ReactNode }) {
     >
       {children}
     </ThemeProvider>
-  )
+  );
 }

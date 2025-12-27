@@ -1,42 +1,61 @@
-"use client"
+"use client";
 
-import dynamic from "next/dynamic"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { SessionProvider } from "next-auth/react"
-import { Toaster } from "sonner"
-import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context"
-import { useNetworkStatus } from "@/hooks/use-network-status"
-import { useAutoSync } from "@/hooks/use-auto-sync"
-import { SidebarSkeleton } from "@/components/ui/skeletons"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
+import { SessionProvider } from "next-auth/react";
+import { Toaster } from "sonner";
 
-const Sidebar = dynamic(() => import("@/components/layout/sidebar").then(mod => ({ default: mod.Sidebar })), {
-  ssr: false,
-  loading: () => <SidebarSkeleton />
-})
+import {
+  SidebarProvider,
+  useSidebar,
+} from "@/components/layout/sidebar-context";
+import { SidebarSkeleton } from "@/components/ui/skeletons";
+import { useAutoSync } from "@/hooks/use-auto-sync";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 
-const MobileSidebar = dynamic(() => import("@/components/layout/sidebar").then(mod => ({ default: mod.MobileSidebar })), {
-  ssr: false
-})
+const Sidebar = dynamic(
+  () =>
+    import("@/components/layout/sidebar").then((mod) => ({
+      default: mod.Sidebar,
+    })),
+  {
+    ssr: false,
+    loading: () => <SidebarSkeleton />,
+  }
+);
 
-const queryClient = new QueryClient()
+const MobileSidebar = dynamic(
+  () =>
+    import("@/components/layout/sidebar").then((mod) => ({
+      default: mod.MobileSidebar,
+    })),
+  {
+    ssr: false,
+  }
+);
+
+const queryClient = new QueryClient();
 
 function MainLayoutContent({ children }: { children: React.ReactNode }) {
-  const { showNewSpace, setShowNewSpace } = useSidebar()
+  const { showNewSpace, setShowNewSpace } = useSidebar();
 
   // Initialize network status monitoring
-  useNetworkStatus()
+  useNetworkStatus();
 
   // Initialize background sync engine
-  useAutoSync()
+  useAutoSync();
 
   return (
     <>
       <MobileSidebar />
 
       <div className="hidden md:grid md:place-items-center min-h-screen">
-        <div className="grid grid-cols-[300px_1fr] w-full max-w-[1020px]">
+        <div className="grid grid-cols-[300px_1fr] w-full max-w-[1180px]">
           <aside className="sticky top-0 h-screen">
-            <Sidebar showNewSpace={showNewSpace} onNewSpaceChange={setShowNewSpace} />
+            <Sidebar
+              showNewSpace={showNewSpace}
+              onNewSpaceChange={setShowNewSpace}
+            />
           </aside>
           <main className="min-w-0">{children}</main>
         </div>
@@ -44,13 +63,13 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
       <main className="md:hidden min-h-screen flex flex-col">{children}</main>
     </>
-  )
+  );
 }
 
 export default function MainLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <SessionProvider>
@@ -61,5 +80,5 @@ export default function MainLayout({
         </SidebarProvider>
       </QueryClientProvider>
     </SessionProvider>
-  )
+  );
 }

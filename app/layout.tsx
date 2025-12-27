@@ -1,9 +1,11 @@
-import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ProFeatureGate } from "@/components/pro-feature-gate";
+import { ThemeProvider } from "@/components/theme-provider";
+
+import type { Metadata, Viewport } from "next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "Marlin",
-  }
+  },
 };
 
 export const viewport: Viewport = {
@@ -43,8 +45,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/logo-light.svg" type="image/svg+xml" media="(prefers-color-scheme: dark)" />
-        <link rel="icon" href="/logo-dark.svg" type="image/svg+xml" media="(prefers-color-scheme: light)" />
+        <link
+          rel="icon"
+          href="/logo-light.svg"
+          type="image/svg+xml"
+          media="(prefers-color-scheme: dark)"
+        />
+        <link
+          rel="icon"
+          href="/logo-dark.svg"
+          type="image/svg+xml"
+          media="(prefers-color-scheme: light)"
+        />
         <link rel="apple-touch-icon" href="/logo-light.svg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

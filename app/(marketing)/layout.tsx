@@ -1,15 +1,16 @@
-"use client"
+"use client";
 
-import { SessionProvider } from "next-auth/react"
-import { DarkLayout } from "@/components/layout/dark-layout"
-import { ClarityLoader } from "@/components/analytics/clarity-loader"
-import { Header } from "@/components/marketing/header"
-import { Footer } from "@/components/marketing/footer"
+import { SessionProvider } from "next-auth/react";
+
+import { ClarityLoader } from "@/components/analytics/clarity-loader";
+import { DarkLayout } from "@/components/layout/dark-layout";
+import { Footer } from "@/components/marketing/footer";
+import { Header } from "@/components/marketing/header";
 
 export default function MarketingLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <SessionProvider>
@@ -17,12 +18,10 @@ export default function MarketingLayout({
         <ClarityLoader />
         <div className="flex min-h-screen flex-col bg-zinc-950 text-white font-sans">
           <Header />
-          <main className="flex-1">
-            {children}
-          </main>
+          <main className="flex-1">{children}</main>
           <Footer />
         </div>
       </DarkLayout>
     </SessionProvider>
-  )
+  );
 }

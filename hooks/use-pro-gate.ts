@@ -13,20 +13,21 @@
  * </Button>
  * ```
  */
-import { create } from 'zustand'
-import { useStore } from '@/lib/store'
+import { create } from "zustand";
+
+import { useStore } from "@/lib/store";
 
 interface ProGateState {
-    isOpen: boolean
-    openDialog: () => void
-    closeDialog: () => void
+  isOpen: boolean;
+  openDialog: () => void;
+  closeDialog: () => void;
 }
 
 export const useProGateStore = create<ProGateState>((set) => ({
-    isOpen: false,
-    openDialog: () => set({ isOpen: true }),
-    closeDialog: () => set({ isOpen: false }),
-}))
+  isOpen: false,
+  openDialog: () => set({ isOpen: true }),
+  closeDialog: () => set({ isOpen: false }),
+}));
 
 /**
  * Hook to gate Pro features
@@ -36,22 +37,22 @@ export const useProGateStore = create<ProGateState>((set) => ({
  * - requirePro: (callback: () => void) => void - executes callback if Pro, opens dialog if not
  */
 export function useProGate() {
-    const isPro = useStore((state) => state.isPro)
-    const openDialog = useProGateStore((state) => state.openDialog)
+  const isPro = useStore((state) => state.isPro);
+  const openDialog = useProGateStore((state) => state.openDialog);
 
-    /**
-     * Execute callback if Pro, otherwise open upgrade dialog
-     */
-    const requirePro = (callback: () => void) => {
-        if (isPro) {
-            callback()
-        } else {
-            openDialog()
-        }
+  /**
+   * Execute callback if Pro, otherwise open upgrade dialog
+   */
+  const requirePro = (callback: () => void) => {
+    if (isPro) {
+      callback();
+    } else {
+      openDialog();
     }
+  };
 
-    return {
-        isPro,
-        requirePro,
-    }
+  return {
+    isPro,
+    requirePro,
+  };
 }

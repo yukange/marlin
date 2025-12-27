@@ -1,11 +1,12 @@
-"use client"
+"use client";
 
-import { Check, Zap, Infinity, Github, ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { useState } from "react"
-import { signIn, useSession } from "next-auth/react"
-import { CreemCheckout } from "@creem_io/nextjs"
+import { CreemCheckout } from "@creem_io/nextjs";
+import { Check, Zap, Infinity, Github, ArrowRight } from "lucide-react";
+import { signIn, useSession } from "next-auth/react";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * Creem Product IDs
@@ -14,19 +15,22 @@ import { CreemCheckout } from "@creem_io/nextjs"
 const PRODUCT_IDS = {
   monthly: process.env.NEXT_PUBLIC_CREEM_PRODUCT_MONTHLY || "prod_pro_monthly",
   yearly: process.env.NEXT_PUBLIC_CREEM_PRODUCT_YEARLY || "prod_pro_yearly",
-  lifetime: process.env.NEXT_PUBLIC_CREEM_PRODUCT_LIFETIME || "prod_pro_lifetime",
-} as const
+  lifetime:
+    process.env.NEXT_PUBLIC_CREEM_PRODUCT_LIFETIME || "prod_pro_lifetime",
+} as const;
 
 export default function PricingPage() {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly")
-  const { data: session, status } = useSession()
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
+    "yearly"
+  );
+  const { data: session, status } = useSession();
 
   const handleAuth = () => {
-    signIn('github', { callbackUrl: '/pricing' })
-  }
+    signIn("github", { callbackUrl: "/pricing" });
+  };
 
-  const isLoading = status === "loading"
-  const isAuthenticated = !!session?.user
+  const isLoading = status === "loading";
+  const isAuthenticated = !!session?.user;
 
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 pt-24 pb-16">
@@ -38,8 +42,8 @@ export default function PricingPage() {
             <span className="text-[#30CF79]">lifetime ownership.</span>
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400">
-            Marlin is local-first and GitHub-native. No hidden servers, no data lock-in.
-            Choose the plan that fits your workflow.
+            Marlin is local-first and GitHub-native. No hidden servers, no data
+            lock-in. Choose the plan that fits your workflow.
           </p>
         </div>
 
@@ -48,10 +52,16 @@ export default function PricingPage() {
           {/* Free Plan */}
           <div className="flex flex-col rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 bg-white dark:bg-zinc-900/50 relative overflow-hidden transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Community</h3>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                Community
+              </h3>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-zinc-900 dark:text-zinc-100">$0</span>
-                <span className="text-zinc-500 dark:text-zinc-400">/ forever</span>
+                <span className="text-4xl font-bold text-zinc-900 dark:text-zinc-100">
+                  $0
+                </span>
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  / forever
+                </span>
               </div>
               <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
                 Perfect for personal knowledge management.
@@ -65,7 +75,11 @@ export default function PricingPage() {
               <PricingFeature text="GitHub Storage" />
             </ul>
 
-            <Button variant="outline" className="w-full rounded-xl h-12" onClick={handleAuth}>
+            <Button
+              variant="outline"
+              className="w-full rounded-xl h-12"
+              onClick={handleAuth}
+            >
               Get Started
             </Button>
           </div>
@@ -74,7 +88,9 @@ export default function PricingPage() {
           <div className="flex flex-col rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 bg-white dark:bg-zinc-900/50 relative overflow-hidden transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
             <div className="mb-8">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Pro Subscription</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Pro Subscription
+                </h3>
               </div>
 
               {/* Internal Toggle */}
@@ -110,10 +126,14 @@ export default function PricingPage() {
                 <span className="text-4xl font-bold text-zinc-900 dark:text-zinc-100">
                   {billingCycle === "monthly" ? "$5" : "$4"}
                 </span>
-                <span className="text-zinc-500 dark:text-zinc-400">/ month</span>
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  / month
+                </span>
               </div>
               <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-                {billingCycle === "monthly" ? "Flexible month-to-month plan." : "Billed annually at $48/year."}
+                {billingCycle === "monthly"
+                  ? "Flexible month-to-month plan."
+                  : "Billed annually at $48/year."}
               </p>
             </div>
 
@@ -126,7 +146,11 @@ export default function PricingPage() {
             </ul>
 
             <PurchaseButton
-              productId={billingCycle === "monthly" ? PRODUCT_IDS.monthly : PRODUCT_IDS.yearly}
+              productId={
+                billingCycle === "monthly"
+                  ? PRODUCT_IDS.monthly
+                  : PRODUCT_IDS.yearly
+              }
               isAuthenticated={isAuthenticated}
               isLoading={isLoading}
               onAuth={handleAuth}
@@ -146,11 +170,17 @@ export default function PricingPage() {
 
             <div className="mb-8">
               <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Pro Lifetime</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Pro Lifetime
+                </h3>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-zinc-900 dark:text-zinc-100">$99</span>
-                <span className="text-sm text-zinc-500 line-through decoration-red-500/50">$149</span>
+                <span className="text-4xl font-bold text-zinc-900 dark:text-zinc-100">
+                  $99
+                </span>
+                <span className="text-sm text-zinc-500 line-through decoration-red-500/50">
+                  $149
+                </span>
               </div>
               <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
                 Own Marlin forever. One-time payment, no recurring fees.
@@ -179,16 +209,21 @@ export default function PricingPage() {
 
         {/* Comparison Section (Simplified) */}
         <div className="mt-24 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-12 dark:text-zinc-100">Why go Pro?</h2>
+          <h2 className="text-2xl font-bold text-center mb-12 dark:text-zinc-100">
+            Why go Pro?
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="flex gap-4">
               <div className="h-10 w-10 shrink-0 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                 <Infinity className="h-5 w-5 text-[#30CF79]" />
               </div>
               <div>
-                <h4 className="font-semibold dark:text-zinc-100">Unlimited Spaces</h4>
+                <h4 className="font-semibold dark:text-zinc-100">
+                  Unlimited Spaces
+                </h4>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                  Create separate repositories for your work, side projects, and personal life. No limits on how you organize.
+                  Create separate repositories for your work, side projects, and
+                  personal life. No limits on how you organize.
                 </p>
               </div>
             </div>
@@ -197,9 +232,12 @@ export default function PricingPage() {
                 <Zap className="h-5 w-5 text-[#30CF79]" />
               </div>
               <div>
-                <h4 className="font-semibold dark:text-zinc-100">Instant Image Upload</h4>
+                <h4 className="font-semibold dark:text-zinc-100">
+                  Instant Image Upload
+                </h4>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                  Just paste an image into the editor. We'll handle the upload to your GitHub repository automatically.
+                  Just paste an image into the editor. We&apos;ll handle the
+                  upload to your GitHub repository automatically.
                 </p>
               </div>
             </div>
@@ -208,9 +246,13 @@ export default function PricingPage() {
                 <Github className="h-5 w-5 text-[#30CF79]" />
               </div>
               <div>
-                <h4 className="font-semibold dark:text-zinc-100">One-click Publish</h4>
+                <h4 className="font-semibold dark:text-zinc-100">
+                  One-click Publish
+                </h4>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                  Instantly turn any note into a beautiful, public webpage using GitHub Gists. Share your thoughts with a single link, no deployment needed.
+                  Instantly turn any note into a beautiful, public webpage using
+                  GitHub Gists. Share your thoughts with a single link, no
+                  deployment needed.
                 </p>
               </div>
             </div>
@@ -219,9 +261,12 @@ export default function PricingPage() {
                 <ArrowRight className="h-5 w-5 text-[#30CF79]" />
               </div>
               <div>
-                <h4 className="font-semibold dark:text-zinc-100">Custom Templates</h4>
+                <h4 className="font-semibold dark:text-zinc-100">
+                  Custom Templates
+                </h4>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                  Set up templates for meeting notes, daily journals, or project briefs to speed up your note-taking process.
+                  Set up templates for meeting notes, daily journals, or project
+                  briefs to speed up your note-taking process.
                 </p>
               </div>
             </div>
@@ -231,36 +276,52 @@ export default function PricingPage() {
         {/* Footer Note */}
         <div className="mt-24 text-center border-t border-zinc-100 dark:border-zinc-800 pt-8">
           <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-            Have questions? <a href="https://github.com/marlin" className="underline hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Visit our GitHub Discussions</a>
+            Have questions?{" "}
+            <a
+              href="https://github.com/marlin"
+              className="underline hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+            >
+              Visit our GitHub Discussions
+            </a>
           </p>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-function PricingFeature({ text, isPro = false }: { text: string, isPro?: boolean }) {
+function PricingFeature({
+  text,
+  isPro = false,
+}: {
+  text: string;
+  isPro?: boolean;
+}) {
   return (
     <li className="flex items-start gap-3 text-sm">
-      <div className={cn(
-        "mt-0.5 h-4 w-4 shrink-0 rounded-full flex items-center justify-center",
-        isPro ? "bg-[#30CF79]/20" : "bg-zinc-100 dark:bg-zinc-800"
-      )}>
-        <Check className={cn("h-3 w-3", isPro ? "text-[#30CF79]" : "text-zinc-500")} />
+      <div
+        className={cn(
+          "mt-0.5 h-4 w-4 shrink-0 rounded-full flex items-center justify-center",
+          isPro ? "bg-[#30CF79]/20" : "bg-zinc-100 dark:bg-zinc-800"
+        )}
+      >
+        <Check
+          className={cn("h-3 w-3", isPro ? "text-[#30CF79]" : "text-zinc-500")}
+        />
       </div>
       <span className="text-zinc-600 dark:text-zinc-400">{text}</span>
     </li>
-  )
+  );
 }
 
 interface PurchaseButtonProps {
-  productId: string
-  isAuthenticated: boolean
-  isLoading: boolean
-  onAuth: () => void
-  userId?: string
-  variant: "default" | "lifetime"
-  label: string
+  productId: string;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  onAuth: () => void;
+  userId?: string;
+  variant: "default" | "lifetime";
+  label: string;
 }
 
 function PurchaseButton({
@@ -286,7 +347,7 @@ function PurchaseButton({
       >
         Loading...
       </Button>
-    )
+    );
   }
 
   // 未登录：显示登录按钮
@@ -303,7 +364,7 @@ function PurchaseButton({
       >
         Sign in to {label}
       </Button>
-    )
+    );
   }
 
   // 已登录：使用 CreemCheckout 组件
@@ -324,5 +385,5 @@ function PurchaseButton({
         {label}
       </Button>
     </CreemCheckout>
-  )
+  );
 }

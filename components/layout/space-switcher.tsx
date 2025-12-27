@@ -1,9 +1,23 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, ChevronsUpDown, Plus, Lock, Globe, MoreHorizontal, ExternalLink, Trash2, Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { useMutation } from "@tanstack/react-query";
+import {
+  Check,
+  ChevronsUpDown,
+  Plus,
+  Lock,
+  Globe,
+  MoreHorizontal,
+  ExternalLink,
+  Trash2,
+  Loader2,
+} from "lucide-react";
+import { useRouter, useParams } from "next/navigation";
+import * as React from "react";
+import { toast } from "sonner";
+
+import { useSidebar } from "@/components/layout/sidebar-context";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -12,19 +26,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -32,86 +34,101 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useStore } from "@/lib/store"
-import { useProGate } from "@/hooks/use-pro-gate"
-import { useRouter, useParams } from "next/navigation"
-import { useSidebar } from "@/components/layout/sidebar-context"
-import { useSpaces } from "@/hooks/use-spaces"
-import { useGitHubUser } from "@/hooks/use-github-user"
-import { deleteSpace, spaceToRepo } from "@/lib/services/space-service"
-import { useMutation } from "@tanstack/react-query"
-import { toast } from "sonner"
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useGitHubUser } from "@/hooks/use-github-user";
+import { useProGate } from "@/hooks/use-pro-gate";
+import { useSpaces } from "@/hooks/use-spaces";
+import { deleteSpace, spaceToRepo } from "@/lib/services/space-service";
+import { useStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 
 export function SpaceSwitcher() {
-  const [open, setOpen] = React.useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
-  const [spaceToDelete, setSpaceToDelete] = React.useState<string | null>(null)
-  const [confirmName, setConfirmName] = React.useState("")
-  const { setShowNewSpace } = useSidebar()
+  const [open, setOpen] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [spaceToDelete, setSpaceToDelete] = React.useState<string | null>(null);
+  const [confirmName, setConfirmName] = React.useState("");
+  const { setShowNewSpace } = useSidebar();
 
-  const router = useRouter()
-  const params = useParams()
-  const { setCurrentSpace } = useStore()
-  const { isPro, requirePro } = useProGate()
-  const { data: user } = useGitHubUser()
+  const router = useRouter();
+  const params = useParams();
+  const { setCurrentSpace } = useStore();
+  const { isPro, requirePro } = useProGate();
+  const { data: user } = useGitHubUser();
 
-  const currentSpaceName = params.space as string
-  const { spaces } = useSpaces()
+  const currentSpaceName = params.space as string;
+  const { spaces } = useSpaces();
 
-  const spacesList = spaces || []
-  const selectedSpace = spacesList.find(space => space.name === currentSpaceName) || spacesList[0]
+  const spacesList = spaces || [];
+  const selectedSpace =
+    spacesList.find((space) => space.name === currentSpaceName) ||
+    spacesList[0];
 
   React.useEffect(() => {
     if (currentSpaceName) {
-      setCurrentSpace(currentSpaceName)
+      setCurrentSpace(currentSpaceName);
     }
-  }, [currentSpaceName, setCurrentSpace])
+  }, [currentSpaceName, setCurrentSpace]);
 
   const deleteSpaceMutation = useMutation({
     mutationFn: async (spaceName: string) => {
-      if (!user) throw new Error("Not authenticated")
-      await deleteSpace(spaceName, user.login)
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
+      await deleteSpace(spaceName, user.login);
     },
     onSuccess: () => {
-      toast.success("Space deleted successfully")
-      setDeleteDialogOpen(false)
-      setSpaceToDelete(null)
-      setConfirmName("")
+      toast.success("Space deleted successfully");
+      setDeleteDialogOpen(false);
+      setSpaceToDelete(null);
+      setConfirmName("");
 
       // Navigate to first other space or /new
-      const otherSpaces = spacesList.filter(s => s.name !== spaceToDelete)
+      const otherSpaces = spacesList.filter((s) => s.name !== spaceToDelete);
       if (otherSpaces.length > 0) {
-        router.push(`/${otherSpaces[0].name}`)
+        router.push(`/${otherSpaces[0].name}`);
       } else {
-        router.push("/new")
+        router.push("/new");
       }
     },
     onError: (error: Error) => {
-      toast.error(`Failed to delete space: ${error.message}`)
+      toast.error(`Failed to delete space: ${error.message}`);
     },
-  })
+  });
 
   const handleOpenInGitHub = (spaceName: string) => {
-    if (!user) return
-    const repoName = spaceToRepo(spaceName)
-    window.open(`https://github.com/${user.login}/${repoName}`, "_blank")
-  }
+    if (!user) {
+      return;
+    }
+    const repoName = spaceToRepo(spaceName);
+    window.open(`https://github.com/${user.login}/${repoName}`, "_blank");
+  };
 
   const handleDeleteClick = (spaceName: string) => {
-    setSpaceToDelete(spaceName)
-    setDeleteDialogOpen(true)
-  }
+    setSpaceToDelete(spaceName);
+    setDeleteDialogOpen(true);
+  };
 
   const handleDeleteConfirm = () => {
     if (spaceToDelete && confirmName === spaceToDelete) {
-      deleteSpaceMutation.mutate(spaceToDelete)
+      deleteSpaceMutation.mutate(spaceToDelete);
     }
-  }
+  };
 
-  const isConfirmValid = spaceToDelete && confirmName === spaceToDelete
+  const isConfirmValid = spaceToDelete && confirmName === spaceToDelete;
 
   return (
     <>
@@ -125,8 +142,14 @@ export function SpaceSwitcher() {
           >
             {selectedSpace ? (
               <>
-                {selectedSpace.isPrivate ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
-                <span className="truncate flex-1 text-left">{selectedSpace.name}</span>
+                {selectedSpace.isPrivate ? (
+                  <Lock className="h-4 w-4" />
+                ) : (
+                  <Globe className="h-4 w-4" />
+                )}
+                <span className="truncate flex-1 text-left">
+                  {selectedSpace.name}
+                </span>
               </>
             ) : (
               <span className="flex-1 text-left">Select space...</span>
@@ -144,8 +167,8 @@ export function SpaceSwitcher() {
                   <CommandItem
                     key={space.name}
                     onSelect={() => {
-                      setOpen(false)
-                      router.push(`/${space.name}`)
+                      setOpen(false);
+                      router.push(`/${space.name}`);
                     }}
                     className="text-sm flex items-center justify-between group"
                   >
@@ -153,14 +176,23 @@ export function SpaceSwitcher() {
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4 shrink-0",
-                          currentSpaceName === space.name ? "opacity-100" : "opacity-0"
+                          currentSpaceName === space.name
+                            ? "opacity-100"
+                            : "opacity-0"
                         )}
                       />
-                      {space.isPrivate ? <Lock className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" /> : <Globe className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {space.isPrivate ? (
+                        <Lock className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <Globe className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                      )}
                       <span className="truncate">{space.name}</span>
                     </div>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuTrigger
+                        asChild
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button
                           variant="ghost"
                           size="icon"
@@ -170,19 +202,21 @@ export function SpaceSwitcher() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation()
-                          handleOpenInGitHub(space.name)
-                        }}>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenInGitHub(space.name);
+                          }}
+                        >
                           <ExternalLink className="mr-2 h-4 w-4" />
                           Open in GitHub
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={(e) => {
-                            e.stopPropagation()
-                            setOpen(false)
-                            handleDeleteClick(space.name)
+                            e.stopPropagation();
+                            setOpen(false);
+                            handleDeleteClick(space.name);
                           }}
                           className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
                         >
@@ -200,12 +234,12 @@ export function SpaceSwitcher() {
               <CommandGroup>
                 <CommandItem
                   onSelect={() => {
-                    setOpen(false)
+                    setOpen(false);
                     // Free users can only have 1 space
                     if (!isPro && spacesList.length >= 1) {
-                      requirePro(() => setShowNewSpace(true))
+                      requirePro(() => setShowNewSpace(true));
                     } else {
-                      setShowNewSpace(true)
+                      setShowNewSpace(true);
                     }
                   }}
                   className="flex items-center justify-between"
@@ -226,26 +260,33 @@ export function SpaceSwitcher() {
         </PopoverContent>
       </Popover>
 
-      <Dialog open={deleteDialogOpen} onOpenChange={(open) => {
-        setDeleteDialogOpen(open)
-        if (!open) {
-          setSpaceToDelete(null)
-          setConfirmName("")
-        }
-      }}>
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setSpaceToDelete(null);
+            setConfirmName("");
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-red-600">Delete Space</DialogTitle>
             <DialogDescription className="text-left">
               This will permanently delete the GitHub repository{" "}
-              <span className="font-mono font-semibold">{spaceToDelete}.marlin</span>{" "}
+              <span className="font-mono font-semibold">
+                {spaceToDelete}.marlin
+              </span>{" "}
               and all its contents. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2 py-4">
             <Label htmlFor="confirm-name">
-              Type <span className="font-mono font-semibold">{spaceToDelete}</span> to confirm
+              Type{" "}
+              <span className="font-mono font-semibold">{spaceToDelete}</span>{" "}
+              to confirm
             </Label>
             <Input
               id="confirm-name"
@@ -260,9 +301,9 @@ export function SpaceSwitcher() {
             <Button
               variant="outline"
               onClick={() => {
-                setDeleteDialogOpen(false)
-                setSpaceToDelete(null)
-                setConfirmName("")
+                setDeleteDialogOpen(false);
+                setSpaceToDelete(null);
+                setConfirmName("");
               }}
               disabled={deleteSpaceMutation.isPending}
             >
@@ -286,6 +327,5 @@ export function SpaceSwitcher() {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
-
