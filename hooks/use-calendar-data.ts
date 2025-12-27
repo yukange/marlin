@@ -2,7 +2,6 @@ import {
   format,
   subMonths,
   startOfMonth,
-  endOfMonth,
   eachDayOfInterval,
   isToday,
 } from "date-fns";
@@ -27,21 +26,46 @@ const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 /**
  * Hook to fetch calendar data for a space
- * Returns data grouped by month, for the last N months
+ * Range: from earliest note's month start OR 3 months ago (whichever is earlier) to today
  * @param space - Space name (e.g., "work")
- * @param monthsBack - Number of months to fetch (default: 6)
  */
-export function useCalendarData(space: string, monthsBack: number = 6) {
+export function useCalendarData(space: string) {
   return useLiveQuery(async () => {
     if (!space) {
       return [];
     }
 
     const today = new Date();
-    const startDate = startOfMonth(subMonths(today, monthsBack - 1));
-    const endDate = today; // Only show up to today, not the rest of the month
+    
+    // Find the earliest note in this space
+    const earliestNote = await db.notes
+      .where("space")
+      .equals(space)
+      .and((note: Note) => !note.deleted)
+      .sortBy("createdAt")
+      .then((notes) => notes[0]);
+    
+    // Calculate start date:
+    // - If no notes: use 3 months ago
+    // - If earliest note is within 3 months: use 3 months ago (1st of that month)
+    // - If earliest note is older than 3 months: use earliest note's month (1st of that month)
+    const threeMonthsAgoStart = startOfMonth(subMonths(today, 3));
+    
+    let startDate: Date;
+    if (!earliestNote) {
+      // No notes, show last 3 months
+      startDate = threeMonthsAgoStart;
+    } else {
+      const earliestNoteMonthStart = startOfMonth(new Date(earliestNote.createdAt));
+      // Use the earlier of: earliest note's month start or 3 months ago
+      startDate = earliestNoteMonthStart < threeMonthsAgoStart 
+        ? earliestNoteMonthStart 
+        : threeMonthsAgoStart;
+    }
+    
+    const endDate = today; // Only show up to today
 
-    // Fetch notes in date range
+    // Fetch notes in date range for counting
     const notes = await db.notes
       .where("space")
       .equals(space)
@@ -94,5 +118,5 @@ export function useCalendarData(space: string, monthsBack: number = 6) {
     });
 
     return result; // Months already in chronological order (oldest first)
-  }, [space, monthsBack]);
+  }, [space]);
 }

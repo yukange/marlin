@@ -39,7 +39,7 @@ export function CalendarBar({
   space,
   visibleDate,
 }: CalendarBarProps) {
-  const data = useCalendarData(space, 6);
+  const data = useCalendarData(space);
   const containerRef = useRef<HTMLElement>(null);
   const dateRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [isUserScrolling, setIsUserScrolling] = useState(false);
@@ -111,7 +111,7 @@ export function CalendarBar({
         {data.map((month) => (
           <div key={month.label}>
             {/* Month Header */}
-            <div className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-2 py-2 sticky top-0 bg-white dark:bg-zinc-950 z-10">
+            <div className="text-xs font-medium text-zinc-600 dark:text-zinc-300 uppercase tracking-wider px-2 py-2 sticky top-0 bg-white dark:bg-zinc-950 z-10">
               {month.label}
             </div>
 
