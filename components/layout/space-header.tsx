@@ -60,7 +60,7 @@ export function SpaceHeader({ spaceName }: SpaceHeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-10 backdrop-blur-xl dark:bg-zinc-950/70 px-6 py-3">
+    <header className="sticky top-0 z-10 backdrop-blur-xl dark:bg-zinc-950/70 py-3">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           {isMobile && (
