@@ -16,7 +16,7 @@ import { SlashCommand } from "@/components/editor/slash-command";
 import { getSuggestionOptions } from "@/components/editor/suggestion";
 
 import type { AnyExtension } from "@tiptap/core";
-import type { DOMOutputSpec } from "prosemirror-model";
+import type { DOMOutputSpec } from "@tiptap/pm/model";
 
 const lowlight = createLowlight(all);
 
