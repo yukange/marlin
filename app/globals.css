@@ -122,20 +122,7 @@
   }
 }
 
-.composer-scroll-area {
-  overflow-y: hidden !important;
-}
 
-/* Only allow scroll after expand animation completes (300ms) */
-.composer-scroll-area[data-expanded="true"] {
-  animation: enable-scroll 0s 320ms forwards;
-}
-
-@keyframes enable-scroll {
-  to {
-    overflow-y: auto !important;
-  }
-}
 
 /* iOS Safari input fixes */
 .composer-scroll-area .tiptap {
