@@ -125,6 +125,7 @@ export function useComposerState({
   const [isSending, setIsSending] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [currentNoteId, setCurrentNoteId] = useState<string | undefined>(
     undefined
   );
@@ -174,6 +175,7 @@ export function useComposerState({
       ) {
         if (isEmpty && isExpanded && !currentNoteId) {
           setIsExpanded(false);
+          setIsMaximized(false);
         }
       }
     };
@@ -192,10 +194,12 @@ export function useComposerState({
 
   const collapse = () => {
     setIsExpanded(false);
+    setIsMaximized(false);
   };
 
   const reset = () => {
     setIsExpanded(false);
+    setIsMaximized(false);
     setCurrentNoteId(undefined);
   };
 
@@ -206,7 +210,12 @@ export function useComposerState({
 
   const startNewNote = () => {
     setIsExpanded(true);
+    setIsMaximized(false);
     setCurrentNoteId(undefined);
+  };
+
+  const toggleMaximized = () => {
+    setIsMaximized((prev) => !prev);
   };
 
   return {
@@ -216,6 +225,8 @@ export function useComposerState({
     setIsEmpty,
     isExpanded,
     setIsExpanded,
+    isMaximized,
+    toggleMaximized,
     currentNoteId,
     setCurrentNoteId,
     editorRef,

@@ -11,6 +11,8 @@ import {
   CheckSquare,
   ImageIcon,
   FileText,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 
@@ -60,6 +62,8 @@ export function Composer({
     reset,
     startNewNote,
     expand,
+    isMaximized,
+    toggleMaximized,
   } = useComposerState({
     initialContent,
     editingNoteId,
@@ -242,7 +246,10 @@ export function Composer({
         className={cn(
           "transition-all duration-300 ease-out overflow-hidden bg-white dark:bg-zinc-900 rounded-t-2xl flex flex-col relative",
           isExpanded
-            ? "h-[400px] border border-b-0 border-zinc-200 dark:border-zinc-800 z-50 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)]"
+            ? cn(
+                "border border-b-0 border-zinc-200 dark:border-zinc-800 z-50 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)]",
+                isMaximized ? "h-[90vh] md:h-[85vh]" : "h-[400px]"
+              )
             : "h-16 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_8px_rgba(0,0,0,0.3)]"
         )}
       >
@@ -266,6 +273,19 @@ export function Composer({
             <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
               {currentNoteId || editingNoteId ? "Update note" : "New note"}
             </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+              onClick={toggleMaximized}
+              title={isMaximized ? "Minimize" : "Maximize"}
+            >
+              {isMaximized ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </Button>
           </header>
           <article
             data-expanded={isExpanded}
