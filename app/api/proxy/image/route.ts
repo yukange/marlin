@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Octokit } from "octokit";
 
 import { auth } from "@/lib/auth";
+import { REPO_NAME } from "@/lib/services/repo-service";
 
 import type { NextRequest } from "next/server";
 
@@ -16,14 +17,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { content, filename, space, userLogin } = (await req.json()) as {
+    const { content, filename, userLogin } = (await req.json()) as {
       content?: string;
       filename?: string;
-      space?: string;
       userLogin?: string;
     };
 
-    if (!content || !filename || !space || !userLogin) {
+    if (!content || !filename || !userLogin) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
@@ -38,14 +38,12 @@ export async function POST(req: NextRequest) {
     // Initialize Octokit with the user's token
     const octokit = new Octokit({ auth: token });
 
-    // Construct repo name with .marlin suffix
-    const repoName = space.endsWith(".marlin") ? space : `${space}.marlin`;
     const path = `images/${filename}`;
 
     // Upload to GitHub
     const response = await octokit.rest.repos.createOrUpdateFileContents({
       owner: userLogin,
-      repo: repoName,
+      repo: REPO_NAME,
       path,
       message: `Add image ${filename}`,
       content, // Already base64 encoded
@@ -53,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     // Use proxy URL for private repo support
     // Format: /api/proxy/image/[owner]/[repo]/[path]
-    const proxyUrl = `/api/proxy/image/${userLogin}/${repoName}/${path}`;
+    const proxyUrl = `/api/proxy/image/${userLogin}/${REPO_NAME}/${path}`;
 
     return NextResponse.json({
       url: proxyUrl,

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { getMarlinExtensions } from "@/components/editor/extensions";
 import { PROSE_CLASSES } from "@/components/editor/styles";
 import { parseTagsToMentions } from "@/hooks/use-composer";
+import { REPO_NAME } from "@/lib/services/repo-service";
 import { cn } from "@/lib/utils";
 
 // Create a custom Highlight mark (re-added for static rendering)
@@ -31,11 +32,10 @@ const Highlight = Mark.create({
 
 interface NoteContentProps {
   content: string;
-  space: string;
   highlight?: string;
 }
 
-export function NoteContent({ content, space, highlight }: NoteContentProps) {
+export function NoteContent({ content, highlight }: NoteContentProps) {
   const html = useMemo(() => {
     if (!content) {
       return "";
@@ -45,7 +45,7 @@ export function NoteContent({ content, space, highlight }: NoteContentProps) {
       // 1. Initialize headless editor with base extensions
       const editor = new Editor({
         editable: false,
-        extensions: [...getMarlinExtensions({ space }), Highlight],
+        extensions: [...getMarlinExtensions({ space: REPO_NAME }), Highlight],
         content: content,
       });
 
@@ -87,7 +87,7 @@ export function NoteContent({ content, space, highlight }: NoteContentProps) {
       console.error("Failed to render note content", e);
       return '<p class="text-red-500">Error rendering note content</p>';
     }
-  }, [content, space, highlight]);
+  }, [content, highlight]);
 
   return (
     <div

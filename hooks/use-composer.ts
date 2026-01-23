@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { getMarlinExtensions } from "@/components/editor/extensions";
 import { PROSE_CLASSES } from "@/components/editor/styles";
 import { cn } from "@/lib/utils";
+import { REPO_NAME } from "@/lib/services/repo-service";
 
 import { useGitHubUser } from "./use-github-user";
 
@@ -23,7 +24,6 @@ interface UseComposerStateOptions {
 
 interface UseMarlinEditorOptions {
   isExpanded: boolean;
-  space?: string;
   onUpdate?: (isEmpty: boolean) => void;
 }
 
@@ -37,21 +37,18 @@ interface UseComposerShortcutsOptions {
 }
 
 interface UseComposerSubmitOptions {
-  space: string;
   getMarkdownContent: () => string;
   currentNoteId?: string;
   onSuccess: () => void;
 }
 
 interface CreateNoteParams {
-  space: string;
   content: string;
   images?: string[]; // Image filenames to track in frontmatter
 }
 
 interface UpdateNoteParams {
   id: string;
-  space: string;
   content: string;
   images?: string[]; // Image filenames to track in frontmatter
 }
@@ -245,7 +242,6 @@ export function useComposerState({
 export function useMarlinEditor({
   isExpanded,
   onUpdate,
-  space,
 }: UseMarlinEditorOptions) {
   const [, forceUpdate] = useState(0);
 
@@ -254,7 +250,7 @@ export function useMarlinEditor({
     extensions: getMarlinExtensions({
       isExpanded,
       placeholder: isExpanded ? "Write something..." : "Type a note...",
-      space,
+      space: REPO_NAME, // Just for consistent context if extensions use it
     }),
     editorProps: {
       attributes: {
@@ -415,7 +411,7 @@ export function useNoteMutations() {
     }
   };
 
-  const deleteNote = async (id: string, space: string) => {
+  const deleteNote = async (id: string) => {
     if (!user) {
       toast.error("User not authenticated");
       return;
@@ -423,7 +419,7 @@ export function useNoteMutations() {
     try {
       const { deleteNote: deleteNoteService } =
         await import("@/lib/services/note-service");
-      await deleteNoteService(id, space, user.login);
+      await deleteNoteService(id, user.login);
       toast.success("Note moved to trash");
     } catch (error) {
       console.error("Failed to delete note:", error);
@@ -432,7 +428,7 @@ export function useNoteMutations() {
     }
   };
 
-  const restoreNote = async (id: string, space: string) => {
+  const restoreNote = async (id: string) => {
     if (!user) {
       toast.error("User not authenticated");
       return;
@@ -440,7 +436,7 @@ export function useNoteMutations() {
     try {
       const { restoreNote: restoreNoteService } =
         await import("@/lib/services/note-service");
-      await restoreNoteService(id, space, user.login);
+      await restoreNoteService(id, user.login);
       toast.success("Note restored");
     } catch (error) {
       console.error("Failed to restore note:", error);
@@ -449,7 +445,7 @@ export function useNoteMutations() {
     }
   };
 
-  const permanentDeleteNote = async (id: string, space: string) => {
+  const permanentDeleteNote = async (id: string) => {
     if (!user) {
       toast.error("User not authenticated");
       return;
@@ -457,7 +453,7 @@ export function useNoteMutations() {
     try {
       const { permanentDeleteNote: permanentDeleteNoteService } =
         await import("@/lib/services/note-service");
-      await permanentDeleteNoteService(id, space, user.login);
+      await permanentDeleteNoteService(id, user.login);
       toast.success("Note permanently deleted");
     } catch (error) {
       console.error("Failed to delete note permanently:", error);
@@ -466,14 +462,14 @@ export function useNoteMutations() {
     }
   };
 
-  const retrySync = async (noteId: string, space: string) => {
+  const retrySync = async (noteId: string) => {
     if (!user) {
       toast.error("User not authenticated");
       return;
     }
     try {
       const { retrySingleNote } = await import("@/lib/services/sync-service");
-      await retrySingleNote(noteId, space, user.login);
+      await retrySingleNote(noteId, user.login);
       toast.success("Note synced successfully");
     } catch (error) {
       console.error("Failed to retry sync:", error);
@@ -484,7 +480,6 @@ export function useNoteMutations() {
 
   const toggleTemplate = async (
     noteId: string,
-    space: string,
     isTemplate: boolean
   ) => {
     if (!user) {
@@ -494,7 +489,7 @@ export function useNoteMutations() {
     try {
       const { toggleNoteTemplate } =
         await import("@/lib/services/note-service");
-      await toggleNoteTemplate(noteId, space, user.login, isTemplate);
+      await toggleNoteTemplate(noteId, user.login, isTemplate);
       toast.success(isTemplate ? "Marked as template" : "Unmarked template");
     } catch (error) {
       console.error("Failed to toggle template:", error);
@@ -519,13 +514,12 @@ export function useNoteMutations() {
 // ============================================================================
 
 export function useComposerSubmit({
-  space,
   getMarkdownContent,
   currentNoteId,
   onSuccess,
 }: UseComposerSubmitOptions) {
   const { createNote, updateNote } = useNoteMutations();
-  const { uploadPendingImages, hasPendingImages } = useImageUpload({ space });
+  const { uploadPendingImages, hasPendingImages } = useImageUpload();
 
   const handleSubmit = async () => {
     let markdownContent = getMarkdownContent();
@@ -551,14 +545,12 @@ export function useComposerSubmit({
       // Edit existing note
       await updateNote({
         id: currentNoteId,
-        space,
         content: markdownContent,
         images: currentImages,
       });
     } else {
       // Create new note
       await createNote({
-        space,
         content: markdownContent,
         images: currentImages,
       });
@@ -578,10 +570,6 @@ export function useComposerSubmit({
 // Image Upload Hook (Local-First)
 // ============================================================================
 
-interface UseImageUploadOptions {
-  space: string;
-}
-
 /**
  * Local-first image upload hook
  *
@@ -589,7 +577,7 @@ interface UseImageUploadOptions {
  * 1. insertLocalImage: Convert file to base64 data URL, insert into editor immediately (no network)
  * 2. uploadPendingImages: Called on submit, finds all data URLs, uploads to GitHub, returns final markdown
  */
-export function useImageUpload({ space }: UseImageUploadOptions) {
+export function useImageUpload() {
   const { data: user } = useGitHubUser();
 
   /**
@@ -665,7 +653,7 @@ export function useImageUpload({ space }: UseImageUploadOptions) {
           body: JSON.stringify({
             content: base64,
             filename,
-            space,
+            space: REPO_NAME, // Hardcoded space for now
             userLogin: user.login,
           }),
         });

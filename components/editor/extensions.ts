@@ -41,7 +41,6 @@ function parseNodes(nodes: any[]): DOMOutputSpec[] {
 
 export function getMarlinExtensions({
   placeholder = "Type a note...",
-  space,
 }: { isExpanded?: boolean; placeholder?: string; space?: string } = {}) {
   const extensions: AnyExtension[] = [
     Markdown.configure({
@@ -162,70 +161,63 @@ export function getMarlinExtensions({
         class: "rounded-lg max-w-full h-auto my-4",
       },
     }),
-  ];
-
-  if (space) {
-    extensions.push(
-      Mention.extend({
-        addStorage() {
-          return {
-            markdown: {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tiptap-markdown types
-              serialize(state: any, node: any) {
-                state.write("#" + node.attrs.id);
-              },
-              parse: {
-                // We assume markdown is just text #tag, which is parsed by main parser
-                // and then autolinked/mentioned by existing rules or just text.
-                // If we needed to parse specific syntax back to mention node:
-                // setup(markdownit) { ... }
-              },
+    Mention.extend({
+      addStorage() {
+        return {
+          markdown: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tiptap-markdown types
+            serialize(state: any, node: any) {
+              state.write("#" + node.attrs.id);
             },
-          };
-        },
-        addKeyboardShortcuts() {
-          return {
-            Backspace: () => {
-              const { selection } = this.editor.state;
-              const { empty, $anchor } = selection;
-              if (!empty) {
-                return false;
-              }
-
-              const nodeBefore = $anchor.nodeBefore;
-              if (nodeBefore && nodeBefore.type.name === this.name) {
-                this.editor.commands.deleteRange({
-                  from: $anchor.pos - nodeBefore.nodeSize,
-                  to: $anchor.pos,
-                });
-                return true;
-              }
+            parse: {
+              // We assume markdown is just text #tag, which is parsed by main parser
+              // and then autolinked/mentioned by existing rules or just text.
+              // If we needed to parse specific syntax back to mention node:
+              // setup(markdownit) { ... }
+            },
+          },
+        };
+      },
+      addKeyboardShortcuts() {
+        return {
+          Backspace: () => {
+            const { selection } = this.editor.state;
+            const { empty, $anchor } = selection;
+            if (!empty) {
               return false;
-            },
-          };
-        },
-      }).configure({
-        HTMLAttributes: {
-          class: "mention text-blue-500 font-medium",
-        },
-        deleteTriggerWithBackspace: false,
-        suggestion: getSuggestionOptions(space),
-        renderText({ node }) {
-          return `#${node.attrs.label ?? node.attrs.id}`;
-        },
-        renderHTML({ node }) {
-          return [
-            "span",
-            { class: "mention text-blue-500 font-medium" },
-            `#${node.attrs.label ?? node.attrs.id}`,
-          ];
-        },
-      }),
-      SlashCommand.configure({
-        space,
-      })
-    );
-  }
+            }
+
+            const nodeBefore = $anchor.nodeBefore;
+            if (nodeBefore && nodeBefore.type.name === this.name) {
+              this.editor.commands.deleteRange({
+                from: $anchor.pos - nodeBefore.nodeSize,
+                to: $anchor.pos,
+              });
+              return true;
+            }
+            return false;
+          },
+        };
+      },
+    }).configure({
+      HTMLAttributes: {
+        class: "mention text-blue-500 font-medium",
+      },
+      deleteTriggerWithBackspace: false,
+      suggestion: getSuggestionOptions(),
+      renderText({ node }) {
+        return `#${node.attrs.label ?? node.attrs.id}`;
+      },
+      renderHTML({ node }) {
+        return [
+          "span",
+          { class: "mention text-blue-500 font-medium" },
+          `#${node.attrs.label ?? node.attrs.id}`,
+        ];
+      },
+    }),
+    SlashCommand,
+  ];
 
   return extensions;
 }

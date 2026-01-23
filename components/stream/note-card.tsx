@@ -33,7 +33,7 @@ import {
 import { useGitHubUser } from "@/hooks/use-github-user";
 import { useProGate } from "@/hooks/use-pro-gate";
 import { type Note } from "@/lib/client/db";
-import { spaceToRepo } from "@/lib/services";
+import { REPO_NAME } from "@/lib/services/repo-service";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime, formatPreciseTime } from "@/lib/utils/date";
 
@@ -49,7 +49,6 @@ export interface NoteCardProps {
   onTagClick: (tag: string) => void;
   onRestore?: (note: Note) => void;
   onPermanentDelete?: (note: Note) => void;
-  space: string;
   highlight?: string;
   isInTrash?: boolean;
   onToggleTemplate?: (note: Note) => void;
@@ -64,7 +63,6 @@ export function NoteCard({
   onRestore,
   onPermanentDelete,
   onToggleTemplate,
-  space,
   highlight,
   isInTrash,
 }: NoteCardProps) {
@@ -88,8 +86,7 @@ export function NoteCard({
     if (!user) {
       return;
     }
-    const repoName = spaceToRepo(space);
-    const url = `https://github.com/${user.login}/${repoName}/blob/main/notes/${note.id}.md`;
+    const url = `https://github.com/${user.login}/${REPO_NAME}/blob/main/notes/${note.id}.md`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -342,7 +339,7 @@ export function NoteCard({
                 : `${MAX_LINES * 1.5}rem`,
           }}
         >
-          <NoteContent content={content} highlight={highlight} space={space} />
+          <NoteContent content={content} highlight={highlight} />
         </div>
 
         {!isExpanded && shouldShowExpandButton && (

@@ -11,10 +11,6 @@ import {
 import { useHeatmapData } from "@/hooks/use-heatmap-data";
 import { cn } from "@/lib/utils";
 
-interface HeatmapProps {
-  space: string;
-}
-
 function getColorClass(level: 0 | 1 | 2 | 3): string {
   switch (level) {
     case 0:
@@ -28,8 +24,8 @@ function getColorClass(level: 0 | 1 | 2 | 3): string {
   }
 }
 
-export function Heatmap({ space }: HeatmapProps) {
-  const data = useHeatmapData(space);
+export function Heatmap() {
+  const data = useHeatmapData();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

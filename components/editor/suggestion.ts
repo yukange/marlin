@@ -7,14 +7,12 @@ import type { SuggestionListRef } from "./suggestion-list";
 import type { SuggestionOptions } from "@tiptap/suggestion";
 import type { Instance as TippyInstance } from "tippy.js";
 
-export const getSuggestionOptions = (
-  space: string
-): Omit<SuggestionOptions, "editor"> => ({
+export const getSuggestionOptions = (): Omit<SuggestionOptions, "editor"> => ({
   char: "#",
   items: async ({ query }) => {
     try {
       const { getAllTags } = await import("@/lib/services/note-service");
-      const tags = await getAllTags(space);
+      const tags = await getAllTags();
       return tags.filter((tag) =>
         tag.toLowerCase().includes(query.toLowerCase())
       );

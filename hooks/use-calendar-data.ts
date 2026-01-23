@@ -25,23 +25,17 @@ export interface CalendarMonth {
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 /**
- * Hook to fetch calendar data for a space
+ * Hook to fetch calendar data for the repository
  * Range: from earliest note's month start OR 3 months ago (whichever is earlier) to today
- * @param space - Space name (e.g., "work")
  */
-export function useCalendarData(space: string) {
+export function useCalendarData() {
   return useLiveQuery(async () => {
-    if (!space) {
-      return [];
-    }
-
     const today = new Date();
     
-    // Find the earliest note in this space
+    // Find the earliest note
     const earliestNote = await db.notes
-      .where("space")
-      .equals(space)
-      .and((note: Note) => !note.deleted)
+      .filter((note: Note) => !note.deleted)
+      .reverse()
       .sortBy("createdAt")
       .then((notes) => notes[0]);
     
@@ -67,9 +61,7 @@ export function useCalendarData(space: string) {
 
     // Fetch notes in date range for counting
     const notes = await db.notes
-      .where("space")
-      .equals(space)
-      .and(
+      .filter(
         (note: Note) =>
           !note.deleted &&
           note.createdAt >= startDate.getTime() &&
@@ -118,5 +110,5 @@ export function useCalendarData(space: string) {
     });
 
     return result; // Months already in chronological order (oldest first)
-  }, [space]);
+  }, []);
 }

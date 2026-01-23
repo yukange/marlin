@@ -5,16 +5,15 @@ import { syncWorkspace } from "@/lib/services/sync-service";
 import { useStore } from "@/lib/store";
 
 /**
- * Hook to sync a space with GitHub
- * @param space - Space name without .marlin suffix (e.g., "work")
+ * Hook to sync the default workspace with GitHub
  */
-export function useSync(space: string) {
+export function useSync() {
   const { setSyncStatus } = useStore();
   const { data: user } = useGitHubUser();
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const sync = useCallback(async () => {
-    if (!space || !user) {
+    if (!user) {
       return;
     }
 
@@ -28,8 +27,8 @@ export function useSync(space: string) {
     try {
       setSyncStatus("syncing");
 
-      // Use centralized sync engine
-      await syncWorkspace(space, user.login);
+      // Use centralized sync engine (no space param)
+      await syncWorkspace(user.login);
 
       if (!controller.signal.aborted) {
         setSyncStatus("synced");
@@ -41,7 +40,7 @@ export function useSync(space: string) {
       console.error("Sync failed:", error);
       setSyncStatus("error");
     }
-  }, [space, user, setSyncStatus]);
+  }, [user, setSyncStatus]);
 
   useEffect(() => {
     sync();

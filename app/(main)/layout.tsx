@@ -5,10 +5,7 @@ import dynamic from "next/dynamic";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
 
-import {
-  SidebarProvider,
-  useSidebar,
-} from "@/components/layout/sidebar-context";
+import { SidebarProvider } from "@/components/layout/sidebar-context";
 import { SidebarSkeleton } from "@/components/ui/skeletons";
 import { useAutoSync } from "@/hooks/use-auto-sync";
 import { useNetworkStatus } from "@/hooks/use-network-status";
@@ -37,8 +34,6 @@ const MobileSidebar = dynamic(
 const queryClient = new QueryClient();
 
 function MainLayoutContent({ children }: { children: React.ReactNode }) {
-  const { showNewSpace, setShowNewSpace } = useSidebar();
-
   // Initialize network status monitoring
   useNetworkStatus();
 
@@ -52,10 +47,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
       <div className="hidden md:grid md:place-items-center min-h-screen">
         <div className="grid grid-cols-[300px_1fr] w-full max-w-[1180px]">
           <aside className="sticky top-0 h-screen">
-            <Sidebar
-              showNewSpace={showNewSpace}
-              onNewSpaceChange={setShowNewSpace}
-            />
+            <Sidebar />
           </aside>
           <main className="min-w-0">{children}</main>
         </div>

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useCallback } from "react";
 
 import { useGitHubUser } from "@/hooks/use-github-user";
-import { db } from "@/lib/client/db";
 import { syncWorkspace } from "@/lib/services/sync-service";
 import { useStore } from "@/lib/store";
+import { REPO_NAME } from "@/lib/services/repo-service";
 
 /**
  * Background Auto-Sync Hook
@@ -17,21 +17,15 @@ import { useStore } from "@/lib/store";
  * 4. Cost Efficiency: Uses Tree SHA to skip unnecessary API calls (304-like).
  * 5. Idle Detection: Avoids syncing while user is typing.
  * 6. Triggers: Interval (60s), Focus, Online.
- * 7. Multi-Space: Iterates and syncs ALL spaces, not just the current one.
+ * 7. Single-Space: Syncs only the default _marlin space.
  */
 export function useAutoSync() {
-  const {
-    currentSpace,
-    syncStatus,
-    setSyncStatus,
-    spacesSyncState,
-    setSpaceSyncStatus,
-  } = useStore();
+  const { syncStatus, setSyncStatus } = useStore();
   const { data: user } = useGitHubUser();
 
   // Refs for state that shouldn't trigger re-renders
   const isSyncingRef = useRef(false);
-  const lastSyncedShaRef = useRef<Record<string, string>>({});
+  const lastSyncedShaRef = useRef<string>("");
   const lastInputTimeRef = useRef(Date.now());
 
   // Track user activity (Idle Detection)
@@ -86,82 +80,34 @@ export function useAutoSync() {
       try {
         isSyncingRef.current = true;
 
-        // Fetch all spaces from local DB
-        const spaces = await db.spaces.toArray();
-        if (spaces.length === 0) {
-          return;
-        }
-
-        // Prioritize currentSpace
-        if (currentSpace) {
-          spaces.sort((a, b) => {
-            if (a.name === currentSpace) {
-              return -1;
-            }
-            if (b.name === currentSpace) {
-              return 1;
-            }
-            return 0;
-          });
-        }
-
         if (syncStatus !== "syncing") {
           setSyncStatus("syncing");
         }
 
         let hasError = false;
-        let totalUploaded = 0;
-        let totalDownloaded = 0;
 
-        // Iterate and sync each space
-        for (const space of spaces) {
-          // Granular Mutex: Skip if this specific space is being synced by UI
-          if (spacesSyncState[space.name] === "syncing") {
-            console.log(
-              `[AutoSync] Skipped space '${space.name}': Locked by another process`
-            );
-            continue;
-          }
-
-          try {
-            setSpaceSyncStatus(space.name, "syncing");
-
-            const result = await syncWorkspace(
-              space.name,
-              user.login,
-              lastSyncedShaRef.current[space.name]
-            );
-
-            setSpaceSyncStatus(space.name, "synced");
-
-            // Update knowledge of remote state
-            if (result.latestSha) {
-              lastSyncedShaRef.current[space.name] = result.latestSha;
-            }
-
-            if (result.skipped) {
-              // console.log(`[AutoSync] Space '${space.name}' skipped (SHA match)`)
-            } else {
-              console.log(
-                `[AutoSync] Space '${space.name}' synced: +${result.uploaded} -${result.downloaded}`
-              );
-              totalUploaded += result.uploaded;
-              totalDownloaded += result.downloaded;
-            }
-          } catch (error) {
-            console.error(
-              `[AutoSync] Failed to sync space '${space.name}':`,
-              error
-            );
-            hasError = true;
-            setSpaceSyncStatus(space.name, "error");
-          }
-        }
-
-        if (totalUploaded > 0 || totalDownloaded > 0) {
-          console.log(
-            `[AutoSync] Cycle (${reason}) complete. Total: +${totalUploaded} -${totalDownloaded}`
+        // Sync default space
+        try {
+          const result = await syncWorkspace(
+            user.login,
+            lastSyncedShaRef.current
           );
+
+          // Update knowledge of remote state
+          if (result.latestSha) {
+            lastSyncedShaRef.current = result.latestSha;
+          }
+
+          if (result.skipped) {
+            // console.log(`[AutoSync] Space skipped (SHA match)`)
+          } else {
+            console.log(
+              `[AutoSync] Space synced: +${result.uploaded} -${result.downloaded}`
+            );
+          }
+        } catch (error) {
+          console.error(`[AutoSync] Failed to sync space:`, error);
+          hasError = true;
         }
 
         setSyncStatus(hasError ? "error" : "synced");
@@ -172,14 +118,7 @@ export function useAutoSync() {
         isSyncingRef.current = false;
       }
     },
-    [
-      user,
-      syncStatus,
-      setSyncStatus,
-      currentSpace,
-      spacesSyncState,
-      setSpaceSyncStatus,
-    ]
+    [user, syncStatus, setSyncStatus]
   );
 
   // 1. Interval Trigger (60s)

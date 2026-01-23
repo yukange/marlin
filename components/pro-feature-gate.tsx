@@ -6,7 +6,7 @@
  * A modal dialog that appears when non-Pro users try to access Pro features.
  * Shows the benefits of upgrading and links to the pricing page.
  */
-import { Crown, Image, FileText, Layers, Globe, Check } from "lucide-react";
+import { Crown, Image, FileText, Globe, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,6 @@ import {
 import { useProGateStore } from "@/hooks/use-pro-gate";
 
 const PRO_FEATURES = [
-  {
-    icon: Layers,
-    title: "Unlimited Spaces",
-    description: "Organize notes across multiple spaces",
-  },
   {
     icon: Image,
     title: "Image Uploads",

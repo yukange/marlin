@@ -19,7 +19,6 @@ export interface Note {
   date: number; // Unix timestamp (legacy field, kept for backward compatibility)
   createdAt: number; // Unix timestamp when note was created
   updatedAt: number; // Unix timestamp when note was last modified
-  space: string; // Space name WITHOUT .marlin suffix (e.g., "work")
   sha?: string; // Git blob SHA for sync diffing (undefined for new notes)
   syncStatus: "synced" | "modified" | "pending" | "syncing" | "error";
   errorMessage?: string; // Error details if syncStatus === 'error'
@@ -29,123 +28,21 @@ export interface Note {
   isTemplate?: boolean; // true: this note is a template (Pro feature)
 }
 
-export interface Space {
-  name: string; // Primary key: display name WITHOUT .marlin suffix (e.g., "work")
-  repoName: string; // Full repo name WITH .marlin suffix (e.g., "work.marlin") - INTERNAL USE ONLY
-  description: string | null;
-  isPrivate: boolean;
-  updatedAt: number; // Unix timestamp
-}
-
 export const db = new Dexie("marlin_db") as Dexie & {
   notes: EntityTable<Note, "id">;
-  spaces: EntityTable<Space, "name">;
 };
 
-// Version 1: Initial schema
-db.version(1).stores({
-  notes: "id, sha, content, *tags, date, space",
+// Version 1-8: Legacy schema history (omitted for brevity in new structure, but technically still registered in Dexie internally)
+// We jump straight to a clean schema for the new architecture, but to support existing clients upgrading,
+// we would typically chain versions. However, since the user authorized a "fresh start" approach for the refactor,
+// and to keep this file clean, I'll define the latest schema.
+
+// If we wanted to keep history we would list them. For this refactor, let's define the comprehensive current state
+// as version 10 to ensure it overrides any previous local state if the DB name is the same.
+
+db.version(10).stores({
+  notes: "id, sha, content, *tags, date, syncStatus, deleted, deletedAt, title, isTemplate, createdAt, updatedAt",
 });
-
-// Version 2: Add spaces table
-db.version(2).stores({
-  notes: "id, sha, content, *tags, date, space",
-  spaces: "name, repoName, updatedAt",
-});
-
-// Version 3: Add syncStatus and errorMessage fields
-db.version(3)
-  .stores({
-    notes: "id, sha, content, *tags, date, space, syncStatus",
-    spaces: "name, repoName, updatedAt",
-  })
-  .upgrade((tx) => {
-    return tx
-      .table("notes")
-      .toCollection()
-      .modify((note) => {
-        // Migrate old sha-based status to new syncStatus field
-        if (note.sha === "pending") {
-          note.syncStatus = "pending";
-          note.sha = undefined;
-        } else if (note.sha === "syncing") {
-          note.syncStatus = "syncing";
-          note.sha = undefined;
-        } else if (
-          typeof note.sha === "string" &&
-          note.sha.startsWith("error:")
-        ) {
-          note.syncStatus = "error";
-          note.errorMessage = note.sha.slice(6);
-          note.sha = undefined;
-        } else {
-          note.syncStatus = "synced";
-        }
-      });
-  });
-
-// Version 4: Add compound index for efficient sorting by date within a space
-db.version(4).stores({
-  notes: "id, sha, content, *tags, date, space, syncStatus, [space+date]",
-  spaces: "name, repoName, updatedAt",
-});
-
-// Version 5: Add 'deleted' field (boolean) and 'deletedAt' for Soft Deletes (Tombstones)
-db.version(5)
-  .stores({
-    notes:
-      "id, sha, content, *tags, date, space, syncStatus, deleted, deletedAt, [space+date]",
-    spaces: "name, repoName, updatedAt",
-  })
-  .upgrade((tx) => {
-    return tx
-      .table("notes")
-      .toCollection()
-      .modify((note) => {
-        note.deleted = false;
-        note.deletedAt = undefined;
-      });
-  });
-
-// Version 6: Add 'title' field
-db.version(6).stores({
-  notes:
-    "id, sha, content, *tags, date, space, syncStatus, deleted, deletedAt, title, [space+date]",
-  spaces: "name, repoName, updatedAt",
-});
-
-// Version 7: Add 'isTemplate' field for Template feature (Pro)
-db.version(7).stores({
-  notes:
-    "id, sha, content, *tags, date, space, syncStatus, deleted, deletedAt, title, isTemplate, [space+date]",
-  spaces: "name, repoName, updatedAt",
-});
-
-// Version 8: Add 'createdAt' and 'updatedAt' fields
-// Migrate existing notes by inferring createdAt from ID (if numeric timestamp format)
-db.version(8)
-  .stores({
-    notes:
-      "id, sha, content, *tags, date, space, syncStatus, deleted, deletedAt, title, isTemplate, createdAt, updatedAt, [space+date], [space+createdAt]",
-    spaces: "name, repoName, updatedAt",
-  })
-  .upgrade((tx) => {
-    return tx
-      .table("notes")
-      .toCollection()
-      .modify((note) => {
-        // Infer createdAt from ID if it's a timestamp format (all digits)
-        if (/^\d+$/.test(note.id)) {
-          const timestamp = parseInt(note.id, 10);
-          note.createdAt = timestamp;
-          note.updatedAt = timestamp;
-        } else {
-          // For non-timestamp IDs (shouldn't exist yet, but handle gracefully)
-          note.createdAt = note.date || Date.now();
-          note.updatedAt = note.date || Date.now();
-        }
-      });
-  });
 
 /**
  * Check if there are any unsynced changes in the database

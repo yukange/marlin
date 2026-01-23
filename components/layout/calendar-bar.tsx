@@ -6,7 +6,6 @@ import { useCalendarData } from "@/hooks/use-calendar-data";
 import { cn } from "@/lib/utils";
 
 interface CalendarBarProps {
-  space: string;
   visibleDate?: string | null; // Which date's notes are currently visible in NoteStream
 }
 
@@ -36,10 +35,9 @@ function ActivityDots({ count }: { count: number }) {
 }
 
 export function CalendarBar({
-  space,
   visibleDate,
 }: CalendarBarProps) {
-  const data = useCalendarData(space);
+  const data = useCalendarData();
   const containerRef = useRef<HTMLElement>(null);
   const dateRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [isUserScrolling, setIsUserScrolling] = useState(false);

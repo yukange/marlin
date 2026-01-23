@@ -6,7 +6,7 @@
  */
 
 export { db, hasUnsyncedChanges } from "./db";
-export type { Note, Space } from "./db";
+export type { Note } from "./db";
 
 export { octokit, fetchNotesTree, fetchBlobs } from "./github-api";
 export type { GitHubApiError } from "./github-api";

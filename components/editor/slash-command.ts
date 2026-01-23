@@ -23,10 +23,6 @@ export interface CommandItem {
   command: (props: { editor: Editor; range: Range }) => void;
 }
 
-interface SlashCommandOptions {
-  space: string;
-}
-
 /**
  * Create suggestion options for slash command
  * Uses Tiptap's official Suggestion utility
@@ -36,9 +32,7 @@ interface SlashCommandOptions {
  *
  * @see https://tiptap.dev/docs/editor/api/utilities/suggestion
  */
-const getSuggestionOptions = (
-  options: SlashCommandOptions
-): Omit<SuggestionOptions, "editor"> => ({
+const getSuggestionOptions = (): Omit<SuggestionOptions, "editor"> => ({
   char: "/",
   startOfLine: true,
 
@@ -53,8 +47,6 @@ const getSuggestionOptions = (
 
     // Fetch templates from DB
     const templates = await db.notes
-      .where("space")
-      .equals(options.space)
       .filter((note) => note.isTemplate === true && !note.deleted)
       .toArray();
 
@@ -183,26 +175,15 @@ const getSuggestionOptions = (
  * - Pro-gated: Non-Pro users are redirected to upgrade dialog
  * - Uses official @tiptap/suggestion utility
  * - Reads isPro directly from zustand store for real-time updates
- *
- * @example
- * SlashCommand.configure({
- *   space: 'my-space',
- * })
  */
-export const SlashCommand = Extension.create<SlashCommandOptions>({
+export const SlashCommand = Extension.create({
   name: "slashCommand",
-
-  addOptions() {
-    return {
-      space: "",
-    };
-  },
 
   addProseMirrorPlugins() {
     return [
       Suggestion({
         editor: this.editor,
-        ...getSuggestionOptions(this.options),
+        ...getSuggestionOptions(),
       }),
     ];
   },

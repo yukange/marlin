@@ -11,7 +11,6 @@ import { type Note } from "@/lib/client/db";
 import { NoteCard } from "./note-card";
 
 interface NoteStreamProps {
-  space: string;
   searchQuery?: string;
   filterDate?: string;
   filterTemplates?: boolean;
@@ -22,7 +21,6 @@ interface NoteStreamProps {
 }
 
 export function NoteStream({
-  space,
   searchQuery = "",
   filterDate = "",
   filterTemplates = false,
@@ -32,7 +30,6 @@ export function NoteStream({
   isInTrash = false,
 }: NoteStreamProps) {
   const notes = useNotes(
-    space,
     searchQuery,
     filterDate,
     isInTrash,
@@ -191,19 +188,19 @@ export function NoteStream({
   };
 
   const handleRetrySync = async (note: Note) => {
-    await retrySync(note.id, space);
+    await retrySync(note.id);
   };
 
   const handleDelete = async (note: Note) => {
-    await deleteNote(note.id, space);
+    await deleteNote(note.id);
   };
 
   const handleRestore = async (note: Note) => {
-    await restoreNote(note.id, space);
+    await restoreNote(note.id);
   };
 
   const handleToggleTemplate = async (note: Note) => {
-    await toggleTemplate(note.id, space, !note.isTemplate);
+    await toggleTemplate(note.id, !note.isTemplate);
   };
 
   const handlePermanentDelete = async (note: Note) => {
@@ -215,7 +212,7 @@ export function NoteStream({
       cancelText: "Cancel",
       variant: "destructive",
       onConfirm: async () => {
-        await permanentDeleteNote(note.id, space);
+        await permanentDeleteNote(note.id);
       },
     });
   };
@@ -258,7 +255,6 @@ export function NoteStream({
           onRestore={handleRestore}
           onPermanentDelete={handlePermanentDelete}
           onToggleTemplate={handleToggleTemplate}
-          space={space}
           highlight={searchQuery}
           isInTrash={isInTrash}
         />

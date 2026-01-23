@@ -1,37 +1,22 @@
 "use client";
 
 import { Trash2, Menu } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { use, useEffect } from "react";
 
 import { useSidebar } from "@/components/layout/sidebar-context";
 import { NoteStream } from "@/components/stream/note-stream";
 import { Button } from "@/components/ui/button";
-import { useSpaces } from "@/hooks/use-spaces";
+import { useRepo } from "@/hooks/use-repo";
 import { useSync } from "@/hooks/use-sync";
 
-export default function TrashPage({
-  params,
-}: {
-  params: Promise<{ space: string }>;
-}) {
-  const { space: spaceName } = use(params);
-  const router = useRouter();
+export default function TrashPage() {
   const { setSidebarOpen, isMobile } = useSidebar();
+  const { isInitialized } = useRepo();
 
-  const { spaces, isLoading: isLoadingSpaces } = useSpaces();
+  useSync();
 
-  useSync(spaceName);
-
-  // Validate space existence
-  useEffect(() => {
-    if (!isLoadingSpaces && spaces) {
-      const spaceExists = spaces.some((s) => s.name === spaceName);
-      if (!spaceExists) {
-        router.push("/app");
-      }
-    }
-  }, [spaceName, spaces, isLoadingSpaces, router]);
+  if (!isInitialized) {
+    return null; 
+  }
 
   return (
     <main className="h-[calc(100vh-3.5rem)] md:h-screen dark:bg-zinc-950 flex flex-col overflow-hidden">
@@ -60,7 +45,7 @@ export default function TrashPage({
           data-note-stream-container
           className="h-full overflow-y-auto [scrollbar-gutter:stable] p-3 pb-8 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full"
         >
-          <NoteStream space={spaceName} isInTrash={true} />
+          <NoteStream isInTrash={true} />
         </article>
       </div>
     </main>

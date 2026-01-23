@@ -12,14 +12,12 @@ import { db } from "@/lib/client/db";
  * - Sorted by date descending
  * - Trash view support
  *
- * @param space - Space name (without .marlin suffix)
  * @param searchQuery - Search query string
  * @param filterDate - Date filter (ISO date string)
  * @param isInTrash - Whether to show deleted notes (default: false)
  * @returns Filtered notes array or undefined during loading
  */
 export function useNotes(
-  space: string,
   searchQuery = "",
   filterDate = "",
   isInTrash = false,
@@ -28,17 +26,11 @@ export function useNotes(
   const notes = useLiveQuery(async () => {
     const lowerQuery = searchQuery.trim().toLowerCase();
 
-    // Optimization: Default view (Space Only)
-    // Use compound index [space+date] to fetch sorted results directly from DB engine
+    // Optimization: Default view
     if (!lowerQuery && !filterDate.trim()) {
-      const collection = db.notes
-        .where("[space+date]")
-        .between([space, Dexie.minKey], [space, Dexie.maxKey])
-        .reverse();
+      // Fetch all, sort by date desc
+      const collection = db.notes.orderBy("date").reverse();
 
-      // Filter by deleted status and template status
-      // Note: Dexie filters are applied in memory after fetching from index,
-      // but it's still faster than full table scan.
       return collection
         .filter((n) => {
           if (!!n.deleted !== isInTrash) {
@@ -60,16 +52,13 @@ export function useNotes(
     if (isTagSearch) {
       const tagToSearch = lowerQuery.slice(1);
 
-      // Use the multi-entry index for tags
-      // This is much faster than scanning all notes in the space
       const notesByTag = await db.notes
         .where("tags")
         .startsWithIgnoreCase(tagToSearch)
         .distinct()
         .toArray();
 
-      // Filter by space and date in memory (dataset should be small)
-      filteredNotes = notesByTag.filter((note) => note.space === space);
+      filteredNotes = notesByTag;
 
       if (filterDate.trim()) {
         const targetDate = new Date(filterDate);
@@ -94,8 +83,8 @@ export function useNotes(
       );
     }
 
-    // Default strategy: Filter on collection before materializing
-    let collection = db.notes.where("space").equals(space);
+    // Default strategy: Filter on collection
+    let collection = db.notes.toCollection();
 
     // Apply deleted filter
     collection = collection.filter((n) => !!n.deleted === isInTrash);
@@ -122,7 +111,7 @@ export function useNotes(
           return true;
         }
 
-        // Search in tags (without # prefix) - fallback for partial matches
+        // Search in tags (without # prefix)
         if (note.tags.some((tag) => tag.toLowerCase().includes(lowerQuery))) {
           return true;
         }
@@ -131,27 +120,22 @@ export function useNotes(
       });
     }
 
-    // Sort by date (sortBy returns array)
+    // Sort by date
     const sortedNotes = await collection.sortBy("date");
     return sortedNotes.reverse();
-  }, [space, searchQuery, filterDate, isInTrash, filterTemplates]);
+  }, [searchQuery, filterDate, isInTrash, filterTemplates]);
 
   return notes;
 }
 
 interface UseNoteSearchOptions {
-  spaceId: string;
   searchQuery: string;
 }
 
 /**
  * Hook to search notes by query (content and tags)
- *
- * @param spaceId - Space name (without .marlin suffix)
- * @param searchQuery - Search query string
- * @returns Filtered notes array or undefined during loading
  */
-export function useNoteSearch({ spaceId, searchQuery }: UseNoteSearchOptions) {
+export function useNoteSearch({ searchQuery }: UseNoteSearchOptions) {
   const notes = useLiveQuery(async () => {
     const lowerQuery = searchQuery.trim().toLowerCase();
     const isTagSearch = lowerQuery.startsWith("#") && lowerQuery.length > 1;
@@ -164,15 +148,13 @@ export function useNoteSearch({ spaceId, searchQuery }: UseNoteSearchOptions) {
         .distinct()
         .toArray();
 
-      return notesByTag
-        .filter((note) => note.space === spaceId)
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
+      return notesByTag.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
     }
 
-    let collection = db.notes.where("space").equals(spaceId);
+    let collection = db.notes.toCollection();
 
     if (searchQuery.trim()) {
       collection = collection.filter((note) => {
@@ -186,7 +168,7 @@ export function useNoteSearch({ spaceId, searchQuery }: UseNoteSearchOptions) {
 
     const sortedNotes = await collection.sortBy("date");
     return sortedNotes.reverse();
-  }, [spaceId, searchQuery]);
+  }, [searchQuery]);
 
   return notes;
 }

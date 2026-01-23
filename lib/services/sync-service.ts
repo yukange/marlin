@@ -9,13 +9,13 @@
  * Depends on:
  * - lib/client/db.ts
  * - lib/client/github-api.ts
- * - lib/services/space-service.ts (for repo name conversion)
+ * - lib/services/repo-service.ts (for REPO_NAME)
  * - lib/utils/markdown.ts (for frontmatter handling)
  */
 
 import { db } from "@/lib/client/db";
 import { fetchNotesTree, fetchBlobs } from "@/lib/client/github-api";
-import { spaceToRepo } from "@/lib/services/space-service";
+import { REPO_NAME } from "@/lib/services/repo-service";
 import { stringifyNote, parseNote } from "@/lib/utils/markdown";
 import {
   isGitHubFile,
@@ -37,18 +37,13 @@ import {
  * 5. Handle conflicts (409) by marking as error
  *
  * @param noteId - Note ID (without .md suffix)
- * @param space - Space name (without .marlin suffix, e.g., "work")
  * @param userLogin - GitHub username
  * @throws {Error} If upload fails
  */
 export async function pushSingleNote(
   noteId: string,
-  space: string,
   userLogin: string
 ): Promise<void> {
-  // Convert space name to repo name for GitHub API
-  const repoName = spaceToRepo(space);
-
   // Get note from database
   const note = await db.notes.get(noteId);
   if (!note) {
@@ -91,7 +86,7 @@ export async function pushSingleNote(
         // Optimistic create/update
         const { data } = await octokit.rest.repos.createOrUpdateFileContents({
           owner: userLogin,
-          repo: repoName,
+          repo: REPO_NAME,
           path: trashPath,
           message: `Move note ${noteId} to trash`,
           content: contentBase64,
@@ -106,7 +101,7 @@ export async function pushSingleNote(
           // File exists, fetch SHA and retry update
           const { data: existing } = await octokit.rest.repos.getContent({
             owner: userLogin,
-            repo: repoName,
+            repo: REPO_NAME,
             path: trashPath,
           });
 
@@ -114,7 +109,7 @@ export async function pushSingleNote(
             const { data } =
               await octokit.rest.repos.createOrUpdateFileContents({
                 owner: userLogin,
-                repo: repoName,
+                repo: REPO_NAME,
                 path: trashPath,
                 message: `Update note ${noteId} in trash`,
                 content: contentBase64,
@@ -135,7 +130,7 @@ export async function pushSingleNote(
         try {
           await octokit.rest.repos.deleteFile({
             owner: userLogin,
-            repo: repoName,
+            repo: REPO_NAME,
             path: activePath,
             message: `Cleanup active note ${noteId}`,
             sha: note.sha,
@@ -164,7 +159,7 @@ export async function pushSingleNote(
     try {
       response = await octokit.rest.repos.createOrUpdateFileContents({
         owner: userLogin,
-        repo: repoName,
+        repo: REPO_NAME,
         path: activePath,
         message: note.sha ? `Update note ${noteId}` : `Create note ${noteId}`,
         content: contentBase64,
@@ -176,14 +171,14 @@ export async function pushSingleNote(
       try {
         const { data: existing } = await octokit.rest.repos.getContent({
           owner: userLogin,
-          repo: repoName,
+          repo: REPO_NAME,
           path: activePath,
         });
 
         if (isGitHubFile(existing)) {
           response = await octokit.rest.repos.createOrUpdateFileContents({
             owner: userLogin,
-            repo: repoName,
+            repo: REPO_NAME,
             path: activePath,
             message: `Update note ${noteId}`,
             content: contentBase64,
@@ -197,7 +192,7 @@ export async function pushSingleNote(
           // File doesn't exist, create it (sha = undefined)
           response = await octokit.rest.repos.createOrUpdateFileContents({
             owner: userLogin,
-            repo: repoName,
+            repo: REPO_NAME,
             path: activePath,
             message: `Restore note ${noteId}`,
             content: contentBase64,
@@ -216,14 +211,14 @@ export async function pushSingleNote(
     try {
       const { data: trashFile } = await octokit.rest.repos.getContent({
         owner: userLogin,
-        repo: repoName,
+        repo: REPO_NAME,
         path: trashPath,
       });
 
       if (isGitHubFile(trashFile)) {
         await octokit.rest.repos.deleteFile({
           owner: userLogin,
-          repo: repoName,
+          repo: REPO_NAME,
           path: trashPath,
           message: `Cleanup trash note ${noteId}`,
           sha: trashFile.sha,
@@ -273,13 +268,11 @@ export async function pushSingleNote(
  * Phase 2: PULL & PRUNE - Download updates and delete removed notes
  * Phase 3: PUSH & RESOLVE - Upload local changes and handle conflicts
  *
- * @param space - Space name (without .marlin suffix, e.g., "work")
  * @param userLogin - GitHub username
  * @param knownRemoteSha - Optional: The last known SHA of the remote tree. If provided, we check for updates before full sync.
  * @returns Statistics about sync operation
  */
 export async function syncWorkspace(
-  space: string,
   userLogin: string,
   knownRemoteSha?: string
 ): Promise<{
@@ -295,9 +288,6 @@ export async function syncWorkspace(
   let pruned = 0;
   let conflicts = 0;
 
-  // Convert space name to repo name for GitHub API
-  const repoName = spaceToRepo(space);
-
   // ========== PHASE 1: SNAPSHOT ==========
 
   // Check if remote has changed (Cost Efficiency)
@@ -305,16 +295,10 @@ export async function syncWorkspace(
   if (knownRemoteSha) {
     try {
       const { fetchRemoteTreeSha } = await import("@/lib/client/github-api");
-      remoteTreeSha = await fetchRemoteTreeSha(userLogin, repoName);
+      remoteTreeSha = await fetchRemoteTreeSha(userLogin, REPO_NAME);
 
       if (remoteTreeSha && remoteTreeSha === knownRemoteSha) {
         // No changes on remote, and assuming local is clean (handled by caller logic usually, but here we prioritize remote check)
-        // Note: Ideally we also check if local is dirty. But for "Background Sync", checking remote is the main optimization.
-        // If local has changes, they should have been pushed via Fast Path.
-        // If Fast Path failed, they are in 'error' or 'modified' state, which Slow Path handles.
-        // So strictly speaking, we should only skip if we are SURE local is clean too.
-        // But for this specific "Cost Efficiency" requirement, we assume we want to avoid the heavy tree fetch if remote hasn't moved.
-        // Let's check local dirty state briefly?
         const dirtyNotes = await db.notes
           .where("syncStatus")
           .notEqual("synced")
@@ -341,28 +325,21 @@ export async function syncWorkspace(
   // Fetch remote tree
   let noteFiles;
   try {
-    noteFiles = await fetchNotesTree(userLogin, repoName);
+    noteFiles = await fetchNotesTree(userLogin, REPO_NAME);
   } catch (error: unknown) {
     // If repo was deleted remotely (404), clean up local space
     if (isErrorWithStatus(error) && error.status === 404) {
       console.log(
-        `Remote repository ${repoName} not found, cleaning up local space ${space}`
+        `Remote repository ${REPO_NAME} not found, cleaning up local space`
       );
 
-      // Delete all notes in this space
-      await db.transaction("rw", db.notes, db.spaces, async () => {
-        await db.notes.where("space").equals(space).delete();
-        await db.spaces.delete(space);
-      });
+      // Delete all notes
+      await db.notes.clear();
 
       throw new Error("Remote repository was deleted");
     }
     throw error;
   }
-
-  // Update the tree SHA if we didn't get it earlier or if we are here now
-  // Since fetchNotesTree doesn't return the tree SHA, we might rely on the earlier fetch or just return undefined if we missed it.
-  // Actually, let's trust the one we got if we did.
 
   // Build remote map (ID without .md suffix -> { sha, path })
   const remoteMap = new Map<string, { sha: string; path: string }>(
@@ -373,7 +350,7 @@ export async function syncWorkspace(
   );
 
   // Get local notes
-  const localNotes = await db.notes.where("space").equals(space).toArray();
+  const localNotes = await db.notes.toArray();
   const localMap = new Map(localNotes.map((n) => [n.id, n]));
 
   // ========== PHASE 2: PULL & PRUNE ==========
@@ -405,7 +382,7 @@ export async function syncWorkspace(
     const shas = batch.map((f) => f.sha);
 
     try {
-      const contents = await fetchBlobs(userLogin, repoName, shas);
+      const contents = await fetchBlobs(userLogin, REPO_NAME, shas);
 
       for (const file of batch) {
         const content = contents[file.sha];
@@ -422,7 +399,6 @@ export async function syncWorkspace(
               date: parsed.date,
               createdAt: parsed.createdAt,
               updatedAt: parsed.updatedAt,
-              space: space,
               syncStatus: "synced",
               deleted: isTrash, // Enforce deleted status based on folder
               deletedAt: isTrash ? parsed.deletedAt || Date.now() : undefined,
@@ -459,10 +435,7 @@ export async function syncWorkspace(
   // ========== PHASE 3: PUSH & RESOLVE ==========
 
   // Get fresh local state after pull
-  const localNotesAfterPull = await db.notes
-    .where("space")
-    .equals(space)
-    .toArray();
+  const localNotesAfterPull = await db.notes.toArray();
 
   for (const note of localNotesAfterPull) {
     // Skip if already synced (whether active or deleted)
@@ -493,7 +466,7 @@ export async function syncWorkspace(
         try {
           const { data } = await octokit.rest.repos.createOrUpdateFileContents({
             owner: userLogin,
-            repo: repoName,
+            repo: REPO_NAME,
             path: `.trash/${note.id}.md`,
             message: `Sync move note ${note.id} to trash`,
             content: contentBase64,
@@ -510,7 +483,7 @@ export async function syncWorkspace(
             // Exists, fetch SHA and update
             const { data: existing } = await octokit.rest.repos.getContent({
               owner: userLogin,
-              repo: repoName,
+              repo: REPO_NAME,
               path: `.trash/${note.id}.md`,
             });
 
@@ -518,7 +491,7 @@ export async function syncWorkspace(
               const { data } =
                 await octokit.rest.repos.createOrUpdateFileContents({
                   owner: userLogin,
-                  repo: repoName,
+                  repo: REPO_NAME,
                   path: `.trash/${note.id}.md`,
                   message: `Sync update note ${note.id} in trash`,
                   content: contentBase64,
@@ -541,7 +514,7 @@ export async function syncWorkspace(
           try {
             await octokit.rest.repos.deleteFile({
               owner: userLogin,
-              repo: repoName,
+              repo: REPO_NAME,
               path: `notes/${note.id}.md`,
               message: `Cleanup active note ${note.id}`,
               sha: remoteInfo.sha, // Use the correct SHA from the correct path
@@ -618,7 +591,7 @@ export async function syncWorkspace(
 
         const { data } = await octokit.rest.repos.createOrUpdateFileContents({
           owner: userLogin,
-          repo: repoName,
+          repo: REPO_NAME,
           path: `notes/${note.id}.md`,
           message: `Sync note ${note.id}`,
           content: contentBase64,
@@ -656,13 +629,11 @@ export async function syncWorkspace(
  * Clears error status and retriggers fast sync.
  *
  * @param noteId - Note ID
- * @param space - Space name (without .marlin suffix)
  * @param userLogin - GitHub username
  * @throws {Error} If note is not in error state
  */
 export async function retrySingleNote(
   noteId: string,
-  space: string,
   userLogin: string
 ): Promise<void> {
   const note = await db.notes.get(noteId);
@@ -676,5 +647,5 @@ export async function retrySingleNote(
     errorMessage: undefined,
   });
 
-  await pushSingleNote(noteId, space, userLogin);
+  await pushSingleNote(noteId, userLogin);
 }

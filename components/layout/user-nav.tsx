@@ -48,11 +48,10 @@ export function UserNav() {
   const { data: githubUser } = useGitHubUser();
   const { theme, setTheme } = useTheme();
   const {
-    currentSpace,
+    syncStatus,
+    setSyncStatus,
     networkStatus,
     rateLimitInfo,
-    spacesSyncState,
-    setSpaceSyncStatus,
     isUnauthorized,
   } = useStore();
   const [showLogoutAlert, setShowLogoutAlert] = useState(false);
@@ -60,9 +59,7 @@ export function UserNav() {
   const version = process.env.NEXT_PUBLIC_APP_VERSION;
   const { isPro } = useLicense();
 
-  const isSyncing = currentSpace
-    ? spacesSyncState[currentSpace] === "syncing"
-    : false;
+  const isSyncing = syncStatus === "syncing";
 
   // Determine status dot color
   const statusColor = isUnauthorized
@@ -128,14 +125,13 @@ export function UserNav() {
   };
 
   const handleSyncCurrentSpace = async () => {
-    if (!currentSpace || !githubUser?.login || isSyncing) {
+    if (!githubUser?.login || isSyncing) {
       return;
     }
 
-    setSpaceSyncStatus(currentSpace, "syncing");
+    setSyncStatus("syncing");
     try {
       const { uploaded, downloaded, pruned, conflicts } = await syncWorkspace(
-        currentSpace,
         githubUser.login
       );
 
@@ -166,11 +162,11 @@ export function UserNav() {
           toast.success(`Synced: ${messages.join(", ")}`);
         }
       }
-      setSpaceSyncStatus(currentSpace, "synced");
+      setSyncStatus("synced");
     } catch (error) {
-      console.error("Failed to sync space:", error);
+      console.error("Failed to sync:", error);
       toast.error("Sync failed. Please try again.");
-      setSpaceSyncStatus(currentSpace, "error");
+      setSyncStatus("error");
     }
   };
 
@@ -260,7 +256,7 @@ export function UserNav() {
               <DropdownMenuSeparator className="my-1" />
             </>
           )}
-          {currentSpace && !isUnauthorized && (
+          {!isUnauthorized && (
             <>
               <DropdownMenuItem
                 onClick={(e) => {
@@ -276,7 +272,7 @@ export function UserNav() {
                     isSyncing && "animate-spin"
                   )}
                 />
-                {isSyncing ? "Syncing..." : "Sync Current Space"}
+                {isSyncing ? "Syncing..." : "Sync Notes"}
               </DropdownMenuItem>
               <DropdownMenuSeparator className="my-1" />
             </>

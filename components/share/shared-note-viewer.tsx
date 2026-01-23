@@ -8,8 +8,8 @@ interface SharedNoteViewerProps {
 
 export function SharedNoteViewer({ content }: SharedNoteViewerProps) {
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-8 md:p-12 min-h-[50vh]">
-      <NoteContent content={content} space="public" />
-    </div>
+    <article className="max-w-2xl mx-auto py-12 px-6">
+      <NoteContent content={content} />
+    </article>
   );
 }

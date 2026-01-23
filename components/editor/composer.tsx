@@ -30,14 +30,12 @@ import { useProGate } from "@/hooks/use-pro-gate";
 import { cn, getPlatformKey } from "@/lib/utils";
 
 interface ComposerProps {
-  space: string;
   initialContent?: string;
   editingNoteId?: string;
   onComplete?: () => void;
 }
 
 export function Composer({
-  space,
   initialContent,
   editingNoteId,
   onComplete,
@@ -76,12 +74,10 @@ export function Composer({
     useMarlinEditor({
       isExpanded,
       onUpdate: setIsEmpty,
-      space,
     });
 
   // Submit handler
   const { handleSubmit } = useComposerSubmit({
-    space,
     getMarkdownContent,
     currentNoteId,
     onSuccess: () => {
@@ -93,7 +89,7 @@ export function Composer({
 
   // Image upload (local-first)
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { insertLocalImage } = useImageUpload({ space });
+  const { insertLocalImage } = useImageUpload();
 
   // Insert image as base64 immediately (no network request)
   const handleImageUpload = useCallback(

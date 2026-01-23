@@ -10,23 +10,16 @@ interface HeatmapDay {
 }
 
 /**
- * Hook to fetch heatmap data for a space
- * @param space - Space name without .marlin suffix (e.g., "work")
+ * Hook to fetch heatmap data for the repository
  */
-export function useHeatmapData(space: string) {
+export function useHeatmapData() {
   return useLiveQuery(async () => {
-    if (!space) {
-      return [];
-    }
-
     const today = new Date();
     const endDate = endOfWeek(today, { weekStartsOn: 0 });
     const startDate = startOfWeek(subWeeks(endDate, 11), { weekStartsOn: 1 });
 
     const notes = await db.notes
-      .where("space")
-      .equals(space)
-      .and(
+      .filter(
         (note: Note) =>
           note.createdAt >= startDate.getTime() &&
           note.createdAt <= endDate.getTime()
@@ -64,5 +57,5 @@ export function useHeatmapData(space: string) {
     }
 
     return result;
-  }, [space]);
+  }, []);
 }

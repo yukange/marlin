@@ -3,8 +3,6 @@
 import * as React from "react";
 
 interface SidebarContextType {
-  showNewSpace: boolean;
-  setShowNewSpace: (show: boolean) => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   isMobile: boolean;
@@ -15,7 +13,6 @@ const SidebarContext = React.createContext<SidebarContextType | undefined>(
 );
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [showNewSpace, setShowNewSpace] = React.useState(false);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
 
@@ -32,8 +29,6 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   return (
     <SidebarContext.Provider
       value={{
-        showNewSpace,
-        setShowNewSpace,
         sidebarOpen,
         setSidebarOpen,
         isMobile,

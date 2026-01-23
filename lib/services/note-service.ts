@@ -15,18 +15,17 @@
 import { uuidv7 } from "uuidv7";
 
 import { db, type Note } from "@/lib/client/db";
+import { REPO_NAME } from "@/lib/services/repo-service";
 import { extractTitle, extractHashtags } from "@/lib/utils/markdown";
 import { isErrorWithStatus, isGitHubFile } from "@/lib/utils/type-guards";
 
 export interface CreateNoteInput {
   content: string;
-  space: string; // Space name without .marlin suffix (e.g., "work")
   userLogin: string;
 }
 
 export interface UpdateNoteInput {
   id: string;
-  space: string; // Space name without .marlin suffix (e.g., "work")
   content: string;
   userLogin: string;
 }
@@ -43,7 +42,7 @@ export interface UpdateNoteInput {
  * @returns Note ID (UUIDv7 string)
  */
 export async function createNote(input: CreateNoteInput): Promise<string> {
-  const { content, space, userLogin } = input;
+  const { content, userLogin } = input;
 
   // Generate UUIDv7 ID (time-ordered, globally unique)
   const id = uuidv7();
@@ -65,7 +64,6 @@ export async function createNote(input: CreateNoteInput): Promise<string> {
     date: now, // Legacy field for backward compatibility
     createdAt: now,
     updatedAt: now,
-    space,
     syncStatus: "pending",
     sha: undefined,
     title,
@@ -74,7 +72,7 @@ export async function createNote(input: CreateNoteInput): Promise<string> {
   // Trigger background sync (fire and forget)
   // Import dynamically to avoid circular dependency
   const { pushSingleNote } = await import("@/lib/services/sync-service");
-  pushSingleNote(id, space, userLogin).catch((error: unknown) => {
+  pushSingleNote(id, userLogin).catch((error: unknown) => {
     console.error(`Background sync failed for note ${id}:`, error);
     // Error is handled in pushSingleNote (sets syncStatus to 'error')
   });
@@ -93,7 +91,7 @@ export async function createNote(input: CreateNoteInput): Promise<string> {
  * @throws {Error} If note not found
  */
 export async function updateNote(input: UpdateNoteInput): Promise<void> {
-  const { id, space, content, userLogin } = input;
+  const { id, content, userLogin } = input;
 
   // Get existing note to preserve metadata
   const existingNote = await db.notes.get(id);
@@ -120,7 +118,7 @@ export async function updateNote(input: UpdateNoteInput): Promise<void> {
 
   // Trigger background sync (fire and forget)
   const { pushSingleNote } = await import("@/lib/services/sync-service");
-  pushSingleNote(id, space, userLogin).catch((error: unknown) => {
+  pushSingleNote(id, userLogin).catch((error: unknown) => {
     console.error(`Background sync failed for note ${id}:`, error);
     // Error is handled in pushSingleNote (sets syncStatus to 'error')
   });
@@ -135,15 +133,10 @@ export async function updateNote(input: UpdateNoteInput): Promise<void> {
  * 3. Trigger background sync to move file to .trash/ on GitHub
  *
  * @param id - Note ID
- * @param space - Space name without .marlin suffix (e.g., "work")
  * @param userLogin - GitHub username
  * @throws {Error} If note not found
  */
-export async function deleteNote(
-  id: string,
-  space: string,
-  userLogin: string
-): Promise<void> {
+export async function deleteNote(id: string, userLogin: string): Promise<void> {
   const note = await db.notes.get(id);
   if (!note) {
     throw new Error("Note not found");
@@ -159,7 +152,7 @@ export async function deleteNote(
   // 2. Trigger background sync
   const { pushSingleNote } = await import("@/lib/services/sync-service");
 
-  pushSingleNote(id, space, userLogin).catch((error: unknown) => {
+  pushSingleNote(id, userLogin).catch((error: unknown) => {
     console.error(`Background delete failed for note ${id}:`, error);
   });
 }
@@ -168,12 +161,10 @@ export async function deleteNote(
  * Restore a note from Trash
  *
  * @param id - Note ID
- * @param space - Space name
  * @param userLogin - GitHub username
  */
 export async function restoreNote(
   id: string,
-  space: string,
   userLogin: string
 ): Promise<void> {
   const note = await db.notes.get(id);
@@ -191,7 +182,7 @@ export async function restoreNote(
   // 2. Trigger background sync
   const { pushSingleNote } = await import("@/lib/services/sync-service");
 
-  pushSingleNote(id, space, userLogin).catch((error: unknown) => {
+  pushSingleNote(id, userLogin).catch((error: unknown) => {
     console.error(`Background restore failed for note ${id}:`, error);
   });
 }
@@ -200,13 +191,11 @@ export async function restoreNote(
  * Toggle a note's template status
  *
  * @param id - Note ID
- * @param space - Space name
  * @param userLogin - GitHub username
  * @param isTemplate - Whether the note should be marked as a template
  */
 export async function toggleNoteTemplate(
   id: string,
-  space: string,
   userLogin: string,
   isTemplate: boolean
 ): Promise<void> {
@@ -224,7 +213,7 @@ export async function toggleNoteTemplate(
   // Trigger background sync
   const { pushSingleNote } = await import("@/lib/services/sync-service");
 
-  pushSingleNote(id, space, userLogin).catch((error: unknown) => {
+  pushSingleNote(id, userLogin).catch((error: unknown) => {
     console.error(`Background template toggle failed for note ${id}:`, error);
   });
 }
@@ -235,12 +224,10 @@ export async function toggleNoteTemplate(
  * Removes from local DB and triggers permanent removal from GitHub .trash/
  *
  * @param id - Note ID
- * @param space - Space name
  * @param userLogin - GitHub username
  */
 export async function permanentDeleteNote(
   id: string,
-  space: string,
   userLogin: string
 ): Promise<void> {
   const note = await db.notes.get(id);
@@ -250,9 +237,6 @@ export async function permanentDeleteNote(
 
   // Import services dynamically
   const { octokit } = await import("@/lib/client/github-api");
-  const { spaceToRepo } = await import("@/lib/services/space-service");
-
-  const repoName = spaceToRepo(space);
 
   // Try to delete from GitHub .trash/ (Best effort)
   try {
@@ -265,7 +249,7 @@ export async function permanentDeleteNote(
       try {
         const { data } = await octokit.rest.repos.getContent({
           owner: userLogin,
-          repo: repoName,
+          repo: REPO_NAME,
           path: `.trash/${id}.md`,
         });
 
@@ -283,7 +267,7 @@ export async function permanentDeleteNote(
     if (sha) {
       await octokit.rest.repos.deleteFile({
         owner: userLogin,
-        repo: repoName,
+        repo: REPO_NAME,
         path: `.trash/${id}.md`,
         message: `Permanent delete note ${id}`,
         sha,
@@ -314,25 +298,21 @@ export async function getNote(id: string): Promise<Note | undefined> {
 }
 
 /**
- * List all active notes in a space (sorted by date descending)
+ * List all active notes (sorted by date descending)
  * Filters out deleted notes.
  */
-export async function listNotes(space: string): Promise<Note[]> {
+export async function listNotes(): Promise<Note[]> {
   return db.notes
-    .where("space")
-    .equals(space)
     .filter((note) => !note.deleted)
     .reverse()
     .sortBy("date");
 }
 
 /**
- * List all notes in Trash for a space
+ * List all notes in Trash
  */
-export async function listTrashNotes(space: string): Promise<Note[]> {
+export async function listTrashNotes(): Promise<Note[]> {
   return db.notes
-    .where("space")
-    .equals(space)
     .filter((note) => note.deleted === true)
     .reverse()
     .sortBy("deletedAt");
@@ -342,11 +322,8 @@ export async function listTrashNotes(space: string): Promise<Note[]> {
  * Search notes by query string
  * Only searches active notes.
  */
-export async function searchNotes(
-  space: string,
-  query: string
-): Promise<Note[]> {
-  const allNotes = await listNotes(space);
+export async function searchNotes(query: string): Promise<Note[]> {
+  const allNotes = await listNotes();
 
   if (!query) {
     return allNotes;
@@ -368,15 +345,10 @@ export async function searchNotes(
 /**
  * Get notes by tag (Active only)
  */
-export async function getNotesByTag(
-  space: string,
-  tag: string
-): Promise<Note[]> {
+export async function getNotesByTag(tag: string): Promise<Note[]> {
   const lowerTag = tag.toLowerCase();
 
   return db.notes
-    .where("space")
-    .equals(space)
     .filter(
       (note) =>
         !note.deleted && note.tags.some((t) => t.toLowerCase() === lowerTag)
@@ -386,14 +358,10 @@ export async function getNotesByTag(
 }
 
 /**
- * Get all unique tags in a space (Active notes only)
+ * Get all unique tags (Active notes only)
  */
-export async function getAllTags(space: string): Promise<string[]> {
-  const notes = await db.notes
-    .where("space")
-    .equals(space)
-    .filter((note) => !note.deleted)
-    .toArray();
+export async function getAllTags(): Promise<string[]> {
+  const notes = await db.notes.filter((note) => !note.deleted).toArray();
 
   const tagSet = new Set<string>();
   notes.forEach((note) => {
@@ -406,7 +374,7 @@ export async function getAllTags(space: string): Promise<string[]> {
 /**
  * Get note count by sync status (Active notes only)
  */
-export async function getNoteStatusCounts(space: string): Promise<{
+export async function getNoteStatusCounts(): Promise<{
   total: number;
   synced: number;
   pending: number;
@@ -414,11 +382,7 @@ export async function getNoteStatusCounts(space: string): Promise<{
   syncing: number;
   error: number;
 }> {
-  const notes = await db.notes
-    .where("space")
-    .equals(space)
-    .filter((note) => !note.deleted)
-    .toArray();
+  const notes = await db.notes.filter((note) => !note.deleted).toArray();
 
   const counts = {
     total: notes.length,
