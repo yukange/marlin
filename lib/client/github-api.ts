@@ -232,3 +232,118 @@ export async function fetchBlobs(
 
   return result;
 }
+
+/**
+ * Create or update a file in the repository
+ */
+export async function createOrUpdateFile(
+  owner: string,
+  repo: string,
+  path: string,
+  content: string,
+  message: string
+): Promise<void> {
+  let sha: string | undefined;
+
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path,
+    });
+
+    if (!Array.isArray(data) && "sha" in data) {
+      sha = data.sha;
+    }
+  } catch (error: unknown) {
+    if ((error as GitHubApiError).status !== 404) {
+      throw error;
+    }
+    // File doesn't exist, proceed with creation
+  }
+
+  // Convert content to Base64 (handle Unicode)
+  const contentBase64 = btoa(unescape(encodeURIComponent(content)));
+
+  await octokit.rest.repos.createOrUpdateFileContents({
+    owner,
+    repo,
+    path,
+    message,
+    content: contentBase64,
+    sha,
+  });
+}
+
+/**
+ * Delete a file from the repository
+ */
+export async function deleteFile(
+  owner: string,
+  repo: string,
+  path: string,
+  message: string
+): Promise<void> {
+  let sha: string;
+
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path,
+    });
+
+    if (Array.isArray(data) || !("sha" in data)) {
+      throw new Error("Path is not a file");
+    }
+    sha = data.sha;
+  } catch (error: unknown) {
+    if ((error as GitHubApiError).status === 404) {
+      return; // File already gone
+    }
+    throw error;
+  }
+
+  await octokit.rest.repos.deleteFile({
+    owner,
+    repo,
+    path,
+    message,
+    sha,
+  });
+}
+
+/**
+ * Get raw file content
+ */
+export async function getFileContent(
+  owner: string,
+  repo: string,
+  path: string
+): Promise<string | null> {
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path,
+    });
+
+    if (Array.isArray(data) || !("content" in data)) {
+      return null;
+    }
+
+    const content = data.content;
+    const encoding = data.encoding;
+
+    if (encoding === "base64") {
+      return decodeURIComponent(escape(atob(content)));
+    }
+
+    return content;
+  } catch (error: unknown) {
+    if ((error as GitHubApiError).status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
