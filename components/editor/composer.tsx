@@ -240,13 +240,13 @@ export function Composer({
       <section
         ref={editorRef}
         className={cn(
-          "transition-all duration-300 ease-out overflow-hidden bg-white dark:bg-zinc-900 rounded-t-2xl flex flex-col relative",
+          "transition-all duration-300 ease-out overflow-hidden bg-white dark:bg-zinc-900 rounded-t-2xl flex flex-col relative pb-[env(safe-area-inset-bottom)]",
           isExpanded
             ? cn(
                 "border border-b-0 border-zinc-200 dark:border-zinc-800 z-50 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)]",
-                isMaximized ? "h-[90vh] md:h-[85vh]" : "h-[400px]"
+                isMaximized ? "h-[90dvh] md:h-[85vh]" : "h-[400px]"
               )
-            : "h-16 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_8px_rgba(0,0,0,0.3)]"
+            : "h-[calc(4rem+env(safe-area-inset-bottom))] shadow-[0_-2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_8px_rgba(0,0,0,0.3)]"
         )}
       >
         {/* Collapsed State Placeholder */}

@@ -47,16 +47,10 @@ export function UserNav() {
   const sessionUser = session?.user;
   const { data: githubUser } = useGitHubUser();
   const { theme, setTheme } = useTheme();
-  const {
-    syncStatus,
-    setSyncStatus,
-    networkStatus,
-    rateLimitInfo,
-    isUnauthorized,
-  } = useStore();
+  const { syncStatus, setSyncStatus, networkStatus, isUnauthorized } =
+    useStore();
   const [showLogoutAlert, setShowLogoutAlert] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const version = process.env.NEXT_PUBLIC_APP_VERSION;
   const { isPro } = useLicense();
 
   const isSyncing = syncStatus === "syncing";
@@ -66,35 +60,8 @@ export function UserNav() {
     ? "bg-red-500"
     : {
         offline: "bg-zinc-400",
-        limited: "bg-amber-500",
         online: "bg-emerald-500",
       }[networkStatus];
-
-  // Determine status text color (matches dot color)
-  const statusTextColor = isUnauthorized
-    ? "text-red-500"
-    : {
-        offline: "text-zinc-400",
-        limited: "text-amber-500",
-        online: "text-emerald-500",
-      }[networkStatus];
-
-  // Determine status text for footer
-  const getStatusText = () => {
-    if (isUnauthorized) {
-      return "Unauthorized";
-    }
-    if (networkStatus === "offline") {
-      return "Offline";
-    }
-    if (networkStatus === "limited") {
-      return "⚠️ Low Rate Limit";
-    }
-    if (rateLimitInfo) {
-      return `API Limit: ${rateLimitInfo.remaining.toLocaleString()}/${rateLimitInfo.limit.toLocaleString()}`;
-    }
-    return "";
-  };
 
   const handleLogout = async () => {
     if (isLoggingOut) {
@@ -332,21 +299,6 @@ export function UserNav() {
             )}
             {isLoggingOut ? "Logging out..." : "Log out"}
           </DropdownMenuItem>
-          <footer className="mt-2 px-2 py-2 border-t border-zinc-200 dark:border-zinc-800">
-            <div className="flex items-center justify-between gap-2">
-              <a
-                href="https://github.com/yukange/marlin/releases"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-              >
-                v{version || "1.0.0"}
-              </a>
-              <span className={cn("text-xs font-mono", statusTextColor)}>
-                {getStatusText()}
-              </span>
-            </div>
-          </footer>
         </DropdownMenuContent>
       </DropdownMenu>
 

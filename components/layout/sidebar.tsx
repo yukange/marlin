@@ -3,11 +3,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { Hash, Trash2, Library, FileText, Search, X } from "lucide-react";
 import Image from "next/image";
-import {
-  useRouter,
-  useSearchParams,
-  usePathname,
-} from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import * as React from "react";
 import { useEffect, useState } from "react";
 
@@ -81,9 +77,7 @@ export function Sidebar({ className }: { className?: string }) {
   };
 
   const allTags = useLiveQuery(async () => {
-    const notes = await db.notes
-      .filter((note) => !note.deleted)
-      .toArray();
+    const notes = await db.notes.filter((note) => !note.deleted).toArray();
 
     const tagSet = new Set<string>();
     notes.forEach((note) => {
@@ -109,7 +103,7 @@ export function Sidebar({ className }: { className?: string }) {
   return (
     <aside
       className={cn(
-        "flex flex-col h-screen dark:bg-zinc-950 backdrop-blur-xl w-[300px] p-[10px] overflow-hidden",
+        "flex flex-col h-screen dark:bg-zinc-950 backdrop-blur-xl w-[300px] px-[10px] pt-[calc(10px+env(safe-area-inset-top))] pb-[calc(10px+env(safe-area-inset-bottom))] overflow-hidden",
         className
       )}
     >
@@ -151,7 +145,7 @@ export function Sidebar({ className }: { className?: string }) {
               />
             </div>
           </div>
-          
+
           <div className="relative px-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 dark:text-zinc-500" />
             <Input

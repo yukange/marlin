@@ -18,7 +18,7 @@ export function SpaceHeader({}: SpaceHeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-10 backdrop-blur-xl dark:bg-zinc-950/70 py-3 md:hidden">
+    <header className="sticky top-0 z-10 backdrop-blur-xl dark:bg-zinc-950/70 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 md:hidden">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"

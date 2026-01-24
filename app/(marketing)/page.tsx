@@ -100,7 +100,7 @@ export default async function MarketingPage() {
           variant="secondary"
           className="rounded-full px-4 py-1 text-sm font-normal bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
         >
-          v{pkg.version} is now live on Edge Runtime
+          Now live on Edge Runtime
         </Badge>
 
         <div className="space-y-4 max-w-[64rem]">

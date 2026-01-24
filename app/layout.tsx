@@ -35,6 +35,7 @@ export const viewport: Viewport = {
   maximumScale: 5, // Allow zoom for iOS accessibility and input focus
   userScalable: true,
   interactiveWidget: "resizes-content",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

@@ -129,16 +129,14 @@ function AppContent() {
     );
   }
 
-  if (isLoading || isCreating || !isInitialized) {
+  if (isCreating) {
     return (
       <main className="grid place-items-center h-screen">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          {(isCreating || !isInitialized) && (
-            <p className="text-sm text-muted-foreground animate-pulse">
-              Initializing your private space...
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground animate-pulse">
+            Initializing your private space...
+          </p>
         </div>
       </main>
     );
@@ -146,7 +144,7 @@ function AppContent() {
 
   // Main App Content
   return (
-    <main className="h-[calc(100vh-3.5rem)] md:h-screen dark:bg-zinc-950 flex overflow-hidden">
+    <main className="h-dvh md:h-screen dark:bg-zinc-950 flex overflow-hidden">
       {/* Left column: Header + NoteStream + Composer */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden px-3 pr-4">
         <SpaceHeader />

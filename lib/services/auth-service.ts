@@ -26,13 +26,6 @@ export interface GitHubUser {
   created_at: string;
 }
 
-export interface RateLimit {
-  limit: number;
-  remaining: number;
-  reset: number; // Unix timestamp
-  used: number;
-}
-
 /**
  * Get authenticated user profile
  *
@@ -42,16 +35,6 @@ export interface RateLimit {
 export async function getUserProfile(): Promise<GitHubUser> {
   const { data } = await octokit.rest.users.getAuthenticated();
   return data as GitHubUser;
-}
-
-/**
- * Get GitHub API rate limit status
- *
- * @returns Rate limit information for current user
- */
-export async function getRateLimit(): Promise<RateLimit> {
-  const { data } = await octokit.rest.rateLimit.get();
-  return data.resources.core;
 }
 
 /**

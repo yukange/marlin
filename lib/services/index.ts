@@ -5,7 +5,7 @@
  * Services are organized by domain (auth, repo, notes, sync).
  */
 
-export { getUserProfile, getRateLimit, isAuthenticated } from "./auth-service";
+export { getUserProfile, isAuthenticated } from "./auth-service";
 
 export {
   createNote,
