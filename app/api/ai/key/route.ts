@@ -1,13 +1,16 @@
 import { SignJWT } from "jose";
 import { NextResponse } from "next/server";
 import { Octokit } from "octokit";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const sodium = require("libsodium-wrappers");
 
 import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
+    // Dynamically import libsodium-wrappers to avoid top-level initialization issues
+    // and linting conflicts with require().
+    const sodium = await import("libsodium-wrappers").then(
+      (mod) => mod.default
+    );
     const session = await auth();
     if (!session?.user?.id || !session.accessToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
