@@ -1,7 +1,8 @@
 import { SignJWT } from "jose";
-import sodium from "libsodium-wrappers";
 import { NextResponse } from "next/server";
 import { Octokit } from "octokit";
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const sodium = require("libsodium-wrappers");
 
 import { auth } from "@/lib/auth";
 
