@@ -3,6 +3,7 @@
 import { Loader2, Plus, Bot, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import YAML from "yaml";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,27 +86,29 @@ export function AutomationList() {
 
         const workflowsData = workflowFiles.map((file) => {
           const content = contentsMap[file.sha] || "";
+          let name = file.name;
+          let cron = "";
+          let tags: string[] = [];
 
-          // Parse YAML/Script args
-          const nameMatch = content.match(/name: (.*)/);
-          const cronMatch = content.match(/cron: '(.*)'/);
-          // Try to match env var first, fallback to CLI args for legacy
-          // Use non-greedy match [^"]* to avoid capturing subsequent flags
-          const tagsMatch =
-            content.match(/MARLIN_TAGS: "([^"]*)"/) ||
-            content.match(/--tags "([^"]*)"/);
-
-          let name = nameMatch ? nameMatch[1].trim() : file.name;
-          // Strip quotes if present
-          if (
-            (name.startsWith('"') && name.endsWith('"')) ||
-            (name.startsWith("'") && name.endsWith("'"))
-          ) {
-            name = name.slice(1, -1);
+          try {
+            const parsed = YAML.parse(content);
+            if (parsed) {
+              name = parsed.name || file.name;
+              cron = parsed.on?.schedule?.[0]?.cron || "";
+              const tagsStr = parsed.env?.MARLIN_TAGS;
+              if (tagsStr) {
+                tags = tagsStr.split(",").filter(Boolean);
+              } else {
+                // Fallback for legacy files via regex (optional, can remove if all migrated)
+                const tagsMatch = content.match(/--tags "([^"]*)"/);
+                if (tagsMatch) {
+                  tags = tagsMatch[1].split(",").filter(Boolean);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn("Failed to parse workflow YAML:", e);
           }
-
-          const cron = cronMatch ? cronMatch[1].trim() : "";
-          const tags = tagsMatch ? tagsMatch[1].split(",").filter(Boolean) : [];
 
           let frequency = "Custom";
           if (cron === "0 0 * * *") {
