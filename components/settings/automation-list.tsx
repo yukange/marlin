@@ -89,7 +89,10 @@ export function AutomationList() {
           // Parse YAML/Script args
           const nameMatch = content.match(/name: (.*)/);
           const cronMatch = content.match(/cron: '(.*)'/);
-          const tagsMatch = content.match(/--tags "(.*)"/);
+          // Try to match env var first, fallback to CLI args for legacy
+          const tagsMatch =
+            content.match(/MARLIN_TAGS: "(.*)"/) ||
+            content.match(/--tags "(.*)"/);
 
           let name = nameMatch ? nameMatch[1].trim() : file.name;
           // Strip quotes if present

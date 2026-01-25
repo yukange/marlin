@@ -15,6 +15,11 @@ on:
     - cron: '${cron}'
   workflow_dispatch:
 
+env:
+  MARLIN_TAGS: "${tags.join(",")}"
+  MARLIN_PERIOD: "${period}"
+  MARLIN_API_KEY: \${{ secrets.MARLIN_API_KEY }}
+
 jobs:
   summarize:
     runs-on: ubuntu-latest
@@ -33,9 +38,7 @@ jobs:
         run: npm install gray-matter
 
       - name: Run summary script
-        run: node ${scriptPath} --tags "${tags.join(",")}" --period "${period}" --key \${{ secrets.MARLIN_API_KEY }} --api-url "${apiUrl}"
-        env:
-          MARLIN_API_KEY: \${{ secrets.MARLIN_API_KEY }}
+        run: node ${scriptPath} --tags "$MARLIN_TAGS" --period "$MARLIN_PERIOD" --key "$MARLIN_API_KEY" --api-url "${apiUrl}"
 
       - name: Commit and push if changed
         run: |
