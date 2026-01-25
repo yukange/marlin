@@ -1,7 +1,9 @@
 export function getWorkflowYaml(
   cron: string,
   scriptPath: string,
-  apiUrl: string
+  apiUrl: string,
+  tags: string[],
+  period: "day" | "week"
 ): string {
   return `name: Periodic AI Summary
 
@@ -28,7 +30,7 @@ jobs:
         run: npm install gray-matter
 
       - name: Run summary script
-        run: node ${scriptPath} --tags "journal,meeting" --period "day" --key \${{ secrets.MARLIN_API_KEY }} --api-url "${apiUrl}"
+        run: node ${scriptPath} --tags "${tags.join(",")}" --period "${period}" --key \${{ secrets.MARLIN_API_KEY }} --api-url "${apiUrl}"
         env:
           MARLIN_API_KEY: \${{ secrets.MARLIN_API_KEY }}
 

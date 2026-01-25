@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-
 import { Loader2, Plus, Bot } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -92,7 +91,7 @@ export function AutomationList() {
   const handleSave = async ({
     name,
     frequency,
-    tags: _tags,
+    tags,
   }: {
     name: string;
     frequency: "daily" | "weekly";
@@ -123,11 +122,14 @@ export function AutomationList() {
 
       // 3. Create Workflow
       const cron = frequency === "daily" ? "0 0 * * *" : "0 0 * * 0";
+      const period = frequency === "daily" ? "day" : "week";
       const uuid = crypto.randomUUID();
       const workflowContent = getWorkflowYaml(
         cron,
         ".github/scripts/marlin-summarize.mjs",
-        window.location.origin
+        window.location.origin,
+        tags,
+        period
       );
 
       const workflowFilename = `marlin-summary-${uuid}.yml`;

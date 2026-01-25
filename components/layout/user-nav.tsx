@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Loader2,
   Crown,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { useSession, signOut, signIn } from "next-auth/react";
@@ -270,6 +271,13 @@ export function UserNav() {
               <DropdownMenuSeparator className="my-1" />
             </>
           )}
+          <DropdownMenuItem asChild className="cursor-pointer mx-1 my-1">
+            <Link href="/app/settings" className="flex items-center">
+              <Settings className="mr-2 h-4 w-4 text-zinc-500" />
+              Settings
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="my-1" />
           <DropdownMenuItem asChild className="cursor-pointer mx-1 my-1">
             <Link href="/privacy" className="flex items-center">
               <Shield className="mr-2 h-4 w-4 text-zinc-500" />
