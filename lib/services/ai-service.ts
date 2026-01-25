@@ -25,7 +25,11 @@ export async function generateSummary(
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [
-      { role: "system", content: "You are a helpful assistant..." },
+      {
+        role: "system",
+        content:
+          "You are a helpful assistant. Summarize the provided notes concisely in English. Use Markdown formatting.",
+      },
       {
         role: "user",
         content: `Here are the notes:\n\n${notesText}\n\nInstruction: ${instruction}`,
