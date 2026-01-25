@@ -105,7 +105,10 @@ export function AutomationList() {
 
     try {
       // 1. Get API Key
-      const keyRes = await fetch("/api/ai/key", { method: "POST" });
+      const keyRes = await fetch("/api/ai/key", {
+        method: "POST",
+        body: JSON.stringify({ owner: repoOwner, repo: REPO_NAME }),
+      });
       if (!keyRes.ok) {
         throw new Error("Failed to generate AI key");
       }

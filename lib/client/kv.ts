@@ -68,6 +68,16 @@ export async function getLicense(
 ): Promise<StoredLicense | null> {
   const kv = getLicenseKV();
   if (!kv) {
+    // In development mode without KV, return a mock Pro license for testing
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[kv] Dev mode: Mocking Pro license for", githubId);
+      return {
+        isPro: true,
+        plan: "lifetime",
+        grantedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
     return null;
   }
 
