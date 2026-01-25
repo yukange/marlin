@@ -98,12 +98,6 @@ export function AutomationList() {
               const tagsStr = parsed.env?.MARLIN_TAGS;
               if (tagsStr) {
                 tags = tagsStr.split(",").filter(Boolean);
-              } else {
-                // Fallback for legacy files via regex (optional, can remove if all migrated)
-                const tagsMatch = content.match(/--tags "([^"]*)"/);
-                if (tagsMatch) {
-                  tags = tagsMatch[1].split(",").filter(Boolean);
-                }
               }
             }
           } catch (e) {
