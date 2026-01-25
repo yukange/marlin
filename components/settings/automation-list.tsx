@@ -1,9 +1,10 @@
 "use client";
 
-import { Loader2, Plus, Bot } from "lucide-react";
+import { Loader2, Plus, Bot, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { octokit, createOrUpdateFile } from "@/lib/client/github-api";
+import {
+  octokit,
+  createOrUpdateFile,
+  fetchBlobs,
+  deleteFile,
+} from "@/lib/client/github-api";
 import { getUserProfile } from "@/lib/services/auth-service";
 import { REPO_NAME } from "@/lib/services/repo-service";
 import { SUMMARY_SCRIPT_CONTENT } from "@/lib/templates/summary-script";
@@ -23,14 +29,19 @@ import { AutomationDialog } from "./automation-dialog";
 interface Workflow {
   name: string;
   path: string;
-  id: number | string;
+  id: string;
+  sha: string;
   state: string;
+  frequency: string;
+  tags: string[];
+  cron: string;
 }
 
 export function AutomationList() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [repoOwner, setRepoOwner] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,21 +69,60 @@ export function AutomationList() {
       });
 
       if (Array.isArray(data)) {
-        const workflows = data
+        const workflowFiles = data
           .filter(
             (file) => file.name.endsWith(".yml") || file.name.endsWith(".yaml")
           )
-          .filter((file) => file.name.startsWith("marlin-summary"))
-          .map((file) => ({
-            name: file.name
-              .replace("marlin-summary-", "")
-              .replace(".yml", "")
-              .replace(".yaml", ""),
+          .filter((file) => file.name.startsWith("marlin-summary"));
+
+        if (workflowFiles.length === 0) {
+          setWorkflows([]);
+          return;
+        }
+
+        const shas = workflowFiles.map((f) => f.sha);
+        const contentsMap = await fetchBlobs(repoOwner, REPO_NAME, shas);
+
+        const workflowsData = workflowFiles.map((file) => {
+          const content = contentsMap[file.sha] || "";
+
+          // Parse YAML/Script args
+          const nameMatch = content.match(/name: (.*)/);
+          const cronMatch = content.match(/cron: '(.*)'/);
+          const tagsMatch = content.match(/--tags "(.*)"/);
+
+          let name = nameMatch ? nameMatch[1].trim() : file.name;
+          // Strip quotes if present
+          if (
+            (name.startsWith('"') && name.endsWith('"')) ||
+            (name.startsWith("'") && name.endsWith("'"))
+          ) {
+            name = name.slice(1, -1);
+          }
+
+          const cron = cronMatch ? cronMatch[1].trim() : "";
+          const tags = tagsMatch ? tagsMatch[1].split(",").filter(Boolean) : [];
+
+          let frequency = "Custom";
+          if (cron === "0 0 * * *") {
+            frequency = "Daily";
+          } else if (cron === "0 0 * * 0") {
+            frequency = "Weekly";
+          }
+
+          return {
+            name,
             path: file.path,
             id: file.sha,
+            sha: file.sha,
             state: "active",
-          }));
-        setWorkflows(workflows as Workflow[]);
+            frequency,
+            tags,
+            cron,
+          };
+        });
+
+        setWorkflows(workflowsData as Workflow[]);
       }
     } catch (error) {
       console.warn("Failed to load workflows or directory empty", error);
@@ -101,7 +151,9 @@ export function AutomationList() {
       return;
     }
 
-    const toastId = toast.loading("Creating automation...");
+    const toastId = toast.loading(
+      editingWorkflow ? "Updating automation..." : "Creating automation..."
+    );
 
     try {
       // 1. Get API Key
@@ -126,8 +178,20 @@ export function AutomationList() {
       // 3. Create Workflow
       const cron = frequency === "daily" ? "0 0 * * *" : "0 0 * * 0";
       const period = frequency === "daily" ? "day" : "week";
-      const uuid = crypto.randomUUID();
+
+      let workflowFilename: string;
+      if (editingWorkflow) {
+        workflowFilename = editingWorkflow.path.replace(
+          ".github/workflows/",
+          ""
+        );
+      } else {
+        const uuid = crypto.randomUUID();
+        workflowFilename = `marlin-summary-${uuid}.yml`;
+      }
+
       const workflowContent = getWorkflowYaml(
+        name,
         cron,
         ".github/scripts/marlin-summarize.mjs",
         window.location.origin,
@@ -135,20 +199,49 @@ export function AutomationList() {
         period
       );
 
-      const workflowFilename = `marlin-summary-${uuid}.yml`;
       await createOrUpdateFile(
         repoOwner,
         REPO_NAME,
         `.github/workflows/${workflowFilename}`,
         workflowContent,
-        `chore: add automation ${name}`
+        `chore: ${editingWorkflow ? "update" : "add"} automation ${name}`
       );
 
-      toast.success("Automation created successfully", { id: toastId });
+      toast.success(
+        `Automation ${editingWorkflow ? "updated" : "created"} successfully`,
+        { id: toastId }
+      );
       loadWorkflows();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to create automation", { id: toastId });
+      toast.error(
+        `Failed to ${editingWorkflow ? "update" : "create"} automation`,
+        { id: toastId }
+      );
+    }
+  };
+
+  const handleDelete = async (workflow: Workflow) => {
+    if (!repoOwner) {
+      return;
+    }
+    if (!confirm(`Are you sure you want to delete "${workflow.name}"?`)) {
+      return;
+    }
+
+    const toastId = toast.loading("Deleting automation...");
+    try {
+      await deleteFile(
+        repoOwner,
+        REPO_NAME,
+        workflow.path,
+        `chore: delete automation ${workflow.name}`
+      );
+      toast.success("Automation deleted", { id: toastId });
+      loadWorkflows();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete automation", { id: toastId });
     }
   };
 
@@ -169,7 +262,12 @@ export function AutomationList() {
             Manage your AI workflows.
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
+        <Button
+          onClick={() => {
+            setEditingWorkflow(null);
+            setIsDialogOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Create Automation
         </Button>
@@ -184,7 +282,13 @@ export function AutomationList() {
           <CardContent className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
             <Bot className="h-12 w-12 mb-4 opacity-50" />
             <p>No automations found.</p>
-            <Button variant="link" onClick={() => setIsDialogOpen(true)}>
+            <Button
+              variant="link"
+              onClick={() => {
+                setEditingWorkflow(null);
+                setIsDialogOpen(true);
+              }}
+            >
               Create one now
             </Button>
           </CardContent>
@@ -192,14 +296,62 @@ export function AutomationList() {
       ) : (
         <div className="grid gap-4">
           {workflows.map((workflow) => (
-            <Card key={workflow.id}>
-              <CardHeader>
-                <CardTitle className="text-base truncate">
-                  {workflow.name}
-                </CardTitle>
-                <CardDescription className="font-mono text-xs">
-                  {workflow.path}
-                </CardDescription>
+            <Card key={workflow.id} className="group">
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                <div className="space-y-1">
+                  <CardTitle className="text-base font-medium">
+                    {workflow.name}
+                  </CardTitle>
+                  <CardDescription className="flex flex-wrap items-center gap-2 mt-1">
+                    <Badge variant="outline" className="font-normal">
+                      {workflow.frequency}
+                    </Badge>
+                    {workflow.tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="font-normal text-xs"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    asChild
+                  >
+                    <a
+                      href={`https://github.com/${repoOwner}/${REPO_NAME}/blob/main/${workflow.path}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      setEditingWorkflow(workflow);
+                      setIsDialogOpen(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => handleDelete(workflow)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
             </Card>
           ))}
@@ -210,6 +362,16 @@ export function AutomationList() {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onSave={handleSave}
+        initialValues={
+          editingWorkflow
+            ? {
+                name: editingWorkflow.name,
+                frequency:
+                  editingWorkflow.frequency === "Weekly" ? "weekly" : "daily",
+                tags: editingWorkflow.tags,
+              }
+            : undefined
+        }
       />
     </div>
   );

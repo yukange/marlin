@@ -33,6 +33,11 @@ import { cn } from "@/lib/utils";
 interface AutomationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialValues?: {
+    name: string;
+    frequency: "daily" | "weekly";
+    tags: string[];
+  };
   onSave: (data: {
     name: string;
     frequency: "daily" | "weekly";
@@ -43,6 +48,7 @@ interface AutomationDialogProps {
 export function AutomationDialog({
   open,
   onOpenChange,
+  initialValues,
   onSave,
 }: AutomationDialogProps) {
   const [name, setName] = React.useState("");
@@ -52,6 +58,20 @@ export function AutomationDialog({
   const [isSaving, setIsSaving] = React.useState(false);
 
   const availableTags = useTags();
+
+  React.useEffect(() => {
+    if (open) {
+      if (initialValues) {
+        setName(initialValues.name);
+        setFrequency(initialValues.frequency);
+        setSelectedTags(initialValues.tags);
+      } else {
+        setName("");
+        setFrequency("daily");
+        setSelectedTags([]);
+      }
+    }
+  }, [open, initialValues]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +106,9 @@ export function AutomationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-visible sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create Automation</DialogTitle>
+          <DialogTitle>
+            {initialValues ? "Edit Automation" : "Create Automation"}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -184,7 +206,11 @@ export function AutomationDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving..." : "Create"}
+              {isSaving
+                ? "Saving..."
+                : initialValues
+                  ? "Save Changes"
+                  : "Create"}
             </Button>
           </DialogFooter>
         </form>

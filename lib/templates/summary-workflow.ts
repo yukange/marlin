@@ -1,11 +1,14 @@
 export function getWorkflowYaml(
+  name: string,
   cron: string,
   scriptPath: string,
   apiUrl: string,
   tags: string[],
   period: "day" | "week"
 ): string {
-  return `name: Periodic AI Summary
+  // Escape double quotes in name
+  const safeName = name.replace(/"/g, '\\"');
+  return `name: "${safeName}"
 
 on:
   schedule:
