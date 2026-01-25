@@ -90,9 +90,10 @@ export function AutomationList() {
           const nameMatch = content.match(/name: (.*)/);
           const cronMatch = content.match(/cron: '(.*)'/);
           // Try to match env var first, fallback to CLI args for legacy
+          // Use non-greedy match [^"]* to avoid capturing subsequent flags
           const tagsMatch =
-            content.match(/MARLIN_TAGS: "(.*)"/) ||
-            content.match(/--tags "(.*)"/);
+            content.match(/MARLIN_TAGS: "([^"]*)"/) ||
+            content.match(/--tags "([^"]*)"/);
 
           let name = nameMatch ? nameMatch[1].trim() : file.name;
           // Strip quotes if present
