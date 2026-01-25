@@ -13,7 +13,6 @@ import { NoteStream } from "@/components/stream/note-stream";
 import { Button } from "@/components/ui/button";
 import { useRepo } from "@/hooks/use-repo";
 import { useSync } from "@/hooks/use-sync";
-import { REPO_NAME } from "@/lib/services/repo-service";
 import { useStore } from "@/lib/store";
 
 const Composer = dynamic(

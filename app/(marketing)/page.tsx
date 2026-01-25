@@ -14,7 +14,6 @@ import { redirect } from "next/navigation";
 import { SignInButton } from "@/components/layout/sign-in-button";
 import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
-import pkg from "@/package.json";
 
 import type { Metadata } from "next";
 
